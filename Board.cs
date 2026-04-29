@@ -25,9 +25,25 @@ public partial class Board : Control
 		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
 		LoadMatrixFromFile("res://Layouts/level2.json");
 		QueueRedraw();
-		
+
+		GetNode("/root/AutoloadSignals").Connect("updateBoard", new Callable(this, MethodName.OnUpdateBoard));
+
 		GD.Print("Board ready. Launching BFS Solver...");
 		SolvePuzzle();
+	}
+
+	private void OnUpdateBoard(Godot.Collections.Array gdMatrix)
+	{
+		int rows = gdMatrix.Count;
+		int[][] matrix = new int[rows][];
+		for (int y = 0; y < rows; y++)
+		{
+			var row = gdMatrix[y].AsGodotArray();
+			matrix[y] = new int[row.Count];
+			for (int x = 0; x < row.Count; x++)
+				matrix[y][x] = row[x].AsInt32();
+		}
+		LoadMatrixLayout(matrix);
 	}
 
 	// --- CORE SOLVER LOGIC ---
@@ -235,7 +251,7 @@ public partial class Board : Control
 		{
 			foreach (var dir in directions)
 			{
-				if (CanMove(currentGrid, b.Pos, b.Size, dir))
+				if (IsDirectionAllowed(b.Size, dir) && CanMove(currentGrid, b.Pos, b.Size, dir))
 					neighbors.Add(ApplyMove(currentGrid, b.Pos, b.Size, dir));
 			}
 		}
@@ -310,8 +326,15 @@ public partial class Board : Control
 		if (@event.IsActionPressed("ui_down")) dir = Vector2I.Down;
 		if (@event.IsActionPressed("ui_left")) dir = Vector2I.Left;
 		if (@event.IsActionPressed("ui_right")) dir = Vector2I.Right;
-		if (dir != Vector2I.Zero && CanMove(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
+		if (dir != Vector2I.Zero && IsDirectionAllowed(_selectedBlock.BlockSize, dir) && CanMove(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
+	}
+
+	private bool IsDirectionAllowed(Vector2I size, Vector2I dir)
+	{
+		if (size.X > size.Y) return dir == Vector2I.Left || dir == Vector2I.Right;
+		if (size.Y > size.X) return dir == Vector2I.Up || dir == Vector2I.Down;
+		return true; // square (2×2 hero) moves in all directions
 	}
 
 	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
