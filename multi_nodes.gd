@@ -53,24 +53,8 @@ func run_test():
 	# goated seed for this example actually
 	seed(21)
 	for item in result:
-		var looper: bool = true
-		while looper == true:
-			if randi() % 7 == 1:
-				xInc += 10
-			elif randi() % 7 == 1:
-				yInc += 10
-			elif randi() % 7 == 1:
-				zInc += 10
-			elif randi() % 7 == 1:
-				xInc -= 10
-			elif randi() % 7 == 1:
-				yInc -= 10
-			elif randi() % 7 == 1:
-				zInc -= 10
-				if !positionList.has(Vector3(xInc,yInc,zInc)):
-					positionList.append(Vector3(xInc,yInc,zInc))
-					create_new_node(xInc, yInc, zInc, item)
-					looper = false
+		create_new_node(0, 0, 0, item)
+		
 
 
 
@@ -136,17 +120,12 @@ func check_matrices(matrix1: Array[Array], matrix2: Array[Array]):
 	return isValid
 
 func create_connection(firstID: int, secondID: int):
+	
 	var meshPoint: Vector3 = (nodeList[firstID].position + nodeList[secondID].position)/2
 	var mesh: NodeLine = nodeLine.instantiate()
-	mesh.position = meshPoint
+	mesh.create_line(nodeList[firstID].position, nodeList[secondID].position, firstID, secondID)
 	
-	mesh.changeHeight(nodeList[firstID].position.distance_to(nodeList[secondID].position))
-	mesh.look_at_from_position(mesh.position, nodeList[firstID].position, Vector3(0, 1, 0.001))
-	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
-	mesh.rotation_degrees.x += 90
-
-	mesh.nodeID1 = firstID
-	mesh.nodeID2 = secondID
+	
 	add_child(mesh)
 	nodeList[firstID].connections.append(mesh)
 	nodeList[secondID].connections.append(mesh)
@@ -154,8 +133,37 @@ func create_connection(firstID: int, secondID: int):
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_delta):
-	pass
+func _process(delta):
+	var totalforce = Vector3.ZERO
+	for node in nodeList:
+		for i in range(nodeList.size()):
+			if i != node.ID:
+				var distance: float = node.position.distance_to(nodeList[i].position)
+				if distance < 0.1:
+					totalforce += Vector3(randf(), randf(), randf()) * 10
+				elif distance > 50:
+					var strength = 1 / (distance * distance)
+					totalforce += (node.position - nodeList[i].position).normalized() * strength
+		
+		
+		for line in node.connections:
+			var dir = node.position - nodeList[line.nodeID2].position
+			line.create_line(node.position, nodeList[line.nodeID2].position, node.ID, nodeList[line.nodeID2].ID)
+			if dir == Vector3.ZERO:
+				line.create_line(node.position, nodeList[line.nodeID1].position, node.ID, nodeList[line.nodeID1].ID)
+				dir = node.position - nodeList[line.nodeID1].position
+			
+			var distance = dir.length()
+			if distance < 0.1:
+				totalforce += Vector3(randf(), randf(), randf()) * 10
+			elif distance > 50:
+				var strength = 1 / (distance * distance)
+				totalforce += (node.position - nodeList[line.nodeID1].position).normalized() * strength
+			node.velocity += totalforce * delta
+		
+	
+	
+	
 
 
 

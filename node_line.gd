@@ -32,3 +32,15 @@ func set_connection_geminipath():
 	cylinder.height = storedSize
 	cylinder.material = load("res://redLineMat.tres")
 	mesh = cylinder
+
+func create_line(first: Vector3, second: Vector3, id1:int,id2:int):
+	position = (first + second)/2
+	
+	var distance = (first.distance_to(second))
+	scale.y = distance * 2
+	look_at_from_position(position, first, Vector3(0, 1, 0.001))
+	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
+	rotation_degrees.x += 90
+	
+	nodeID1 = id1
+	nodeID2 = id2

@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-@export var speed := 45.0
+@export var speed := 450.0
 @export var rotation_speed := 1.5
 
 var yaw := 0.0
