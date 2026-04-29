@@ -30,6 +30,8 @@ public partial class Board : Control
 		// SpawnInitialLayout();
 		LoadMatrixFromFile("res://Layouts/level1.json");
 		QueueRedraw();
+		
+		GetTree().Root.SetMeta("board", this);
 	}
 
 	private void SpawnInitialLayout()
