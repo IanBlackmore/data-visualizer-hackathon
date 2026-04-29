@@ -59,9 +59,22 @@ public partial class Board : Control
 
 	public bool CanMove(KlotskiBlock block, Vector2I direction)
 	{
-		Vector2I newPos = block.GridPos + direction;
+		
+		// 1. Check for Square vs Rectangle
+		bool isSquare = block.BlockSize.X == block.BlockSize.Y;
 
-		// 1. Boundary check
+		if (!isSquare)
+		{
+			// It's a rectangle, apply "Rail" movement
+			bool isHorizontal = block.BlockSize.X > block.BlockSize.Y;
+			bool isVertical = block.BlockSize.Y > block.BlockSize.X;
+
+			if (isHorizontal && direction.Y != 0) return false; // Wide blocks can't go Up/Down
+			if (isVertical && direction.X != 0) return false;   // Tall blocks can't go Left/Right
+		}
+
+		// 2. Boundary check
+		Vector2I newPos = block.GridPos + direction;
 		if (
 			newPos.X < 0 ||
 			newPos.Y < 0 ||
@@ -72,7 +85,7 @@ public partial class Board : Control
 			return false;
 		}
 
-		// 2. Collision check against other blocks
+		// 3. Collision check against other blocks
 		foreach (var other in _blocks)
 		{
 			if (other == block)
@@ -90,7 +103,7 @@ public partial class Board : Control
 				return false;
 			}
 		}
-
+		
 		return true;
 	}
 
@@ -109,7 +122,7 @@ public partial class Board : Control
 
 	public override void _Input(InputEvent @event)
 	{
-		//export hotkey
+		//export hotke	y
 		if (@event.IsActionPressed("export_board"))
 		{
 			SaveMatrixToFile("res://Layouts/exported_level.json");
