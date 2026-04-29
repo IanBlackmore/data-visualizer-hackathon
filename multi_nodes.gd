@@ -270,3 +270,7 @@ func generate_all_states(start_board):
 				queue.append(state)
 	
 	return visited.values()
+
+
+func _on_gemini_request_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
+	pass # Replace with function body.
