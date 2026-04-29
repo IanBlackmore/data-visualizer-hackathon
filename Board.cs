@@ -151,12 +151,29 @@ public partial class Board : Control
 	public string serializeState(byte[,] grid){
 		char[] flattenedState = new char[20];
 		int ind = 0;
-		for(int x = 0; x < 5; x++){
-			for(int y = 0; y < 5; y++){
-			 	flattenedState = (char)grid[x,y];
+
+		for(int i = 0; i < 5; i++){
+			for(int j = 0; j < 5; j++){
+			 	flattenedState[ind++] = (char)grid[i,j];
+
 			}
 		}
 		return new string(flattenedState);
+	}
+	
+	private bool IsWinState(byte[,] grid)
+	{
+		// Common Klotski win: 2x2 Hero block at bottom middle
+		return grid[1, 3] == (byte)'H' && grid[1, 4] == (byte)'H' && 
+			   grid[2, 3] == (byte)'H' && grid[2, 4] == (byte)'H';
+	}
+	
+	private byte GetSymbolForBlock(KlotskiBlock block)
+	{
+		if (block.BlockSize.X == 2 && block.BlockSize.Y == 2) return (byte)'H';
+		if (block.BlockSize.X == 1 && block.BlockSize.Y == 2) return (byte)'V';
+		if (block.BlockSize.X == 2 && block.BlockSize.Y == 1) return (byte)'W';
+		return (byte)'S'; // Small 1x1
 	}
 	
 	public List<byte[,]> GetNextStates(byte[,] currentGrid)
@@ -214,7 +231,7 @@ public partial class Board : Control
 
 		// 2. INITIAL STATE
 		byte[,] startState = GetState2D();
-		string startHash = GetStateString(startState);
+		string startHash = serializeState(startState);
 		
 		queue.Enqueue(startState);
 		visited.Add(startHash, null); // Null means it's the root/starting node
@@ -223,7 +240,7 @@ public partial class Board : Control
 		while (queue.Count > 0)
 		{
 			byte[,] current = queue.Dequeue();
-			string currentHash = GetStateString(current);
+			string currentHash = serializeState(current);
 
 			// Check if this state is the winner (Hero at exit)
 			if (IsWinState(current))
@@ -236,7 +253,7 @@ public partial class Board : Control
 			// 4. EXPLORE NEIGHBORS
 			foreach (byte[,] next in GetNextStates(current))
 			{
-				string nextHash = GetStateString(next);
+				string nextHash = serializeState(next);
 
 				if (!visited.ContainsKey(nextHash))
 				{
@@ -249,5 +266,53 @@ public partial class Board : Control
 				}
 			}
 		}
+	}
+	
+	private void DisplaySolution(Dictionary<string, string> visited, string finalHash)
+	{
+		GD.Print("Found a path! Backtracking...");
+		// Logic to highlight the path in your graph goes here later
+	}
+
+	private void CreateVisualNode(string nextHash, string currentHash)
+	{
+		// Logic to spawn your GraphNode and draw a line goes here
+		// For now, just a print statement to verify it's working:
+		// GD.Print($"New Node: {nextHash} from {currentHash}");
+	}
+	
+	// Helper class to store temporary block data for the solver
+	public struct BlockData {
+		public Vector2I Pos;
+		public Vector2I Size;
+		public byte Type;
+	}
+
+	private List<BlockData> FindBlocksInGrid(byte[,] grid) {
+		List<BlockData> blocks = new List<BlockData>();
+		bool[,] visited = new bool[4, 5];
+
+		for (int y = 0; y < 5; y++) {
+			for (int x = 0; x < 4; x++) {
+				if (grid[x, y] != (byte)'.' && !visited[x, y]) {
+					byte type = grid[x, y];
+					Vector2I size = GetSizeFromType(type, grid, x, y);
+					blocks.Add(new BlockData { Pos = new Vector2I(x, y), Size = size, Type = type });
+
+					// Mark all cells of this block as visited
+					for (int sy = 0; sy < size.Y; sy++)
+						for (int sx = 0; sx < size.X; sx++)
+							visited[x + sx, y + sy] = true;
+				}
+			}
+		}
+		return blocks;
+	}
+
+	private Vector2I GetSizeFromType(byte type, byte[,] grid, int x, int y) {
+		if (type == (byte)'H') return new Vector2I(2, 2);
+		if (type == (byte)'V') return new Vector2I(1, 2);
+		if (type == (byte)'W') return new Vector2I(2, 1);
+		return new Vector2I(1, 1); // 'S'
 	}
 }
