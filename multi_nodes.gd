@@ -3,11 +3,11 @@ extends Node3D
 
 @export var max_nodes: int = 500
 
-var repulsion_strength: float = 700.0
-var stiffness: float = 0.5
-var rest_length: float = 10.0
-var damping: float = 0.85
-var lerp_speed: float = 0.1
+var repulsion_strength: float = 6000.0
+var stiffness: float = 60.0
+var rest_length: float = 20.0
+var damping: float = 0.98
+var lerp_speed: float = 0.3
 
 const graphNode: PackedScene = preload("res://graphNode.tscn")
 const nodeLine: PackedScene = preload("res://nodeLine.tscn")
