@@ -7,8 +7,7 @@ var nodeID2: int
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	nodeID1 = 0
-	nodeID2 = 0
+	pass
 
 func changeHeight(size: float):
 	var cylinder: CylinderMesh = CylinderMesh.new()
@@ -35,9 +34,11 @@ func set_connection_geminipath():
 
 func create_line(first: Vector3, second: Vector3, id1:int,id2:int):
 	position = (first + second)/2
-	
+	material_override = load("res://whiteMat.tres")
 	var distance = (first.distance_to(second))
-	scale.y = distance * 2
+	if distance == 0:
+		distance = 0.5
+	scale.y = distance / 2
 	if (position != first):
 		look_at_from_position(position, first, Vector3(0, 1, 0.001))
 	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended

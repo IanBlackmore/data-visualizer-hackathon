@@ -1,9 +1,9 @@
 class_name GraphNodeTree
 extends Node3D
 
-var repulsion_strength: float = 300.0
-var stiffness: float = 8.0
-var rest_length: float = 12.0
+var repulsion_strength: float = 700.0
+var stiffness: float = 0.5
+var rest_length: float = 10.0
 var damping: float = 0.85  # Slows nodes down so they settle
 var lerp_speed: float = 0.1 # The "smoothness" factor
 
@@ -54,14 +54,9 @@ func run_test():
 	var matrix: Array[Array] = load_matrix_from_file("res://Layouts/level1.json");
 	
 	var result = generate_all_states(matrix)
-	var xInc: int = 10
-	var yInc: int = 10
-	var zInc: int = 10
-	# goated seed for this example actually
-	seed(21)
+	
 	for item in result:
-		create_new_node(0, 0, 0, item)
-		
+		create_new_node(randi()%80, randi()%80, randi()%80, item)
 
 
 
@@ -127,23 +122,23 @@ func check_matrices(matrix1: Array[Array], matrix2: Array[Array]):
 	return isValid
 
 func create_connection(firstID: int, secondID: int):
-	
+	print("creating connection with " + str(firstID) + " and " + str(secondID))
 	var meshPoint: Vector3 = (nodeList[firstID].position + nodeList[secondID].position)/2
 	var mesh: NodeLine = nodeLine.instantiate()
 	mesh.create_line(nodeList[firstID].position, nodeList[secondID].position, firstID, secondID)
-	mesh.position = (nodeList[firstID].position + nodeList[secondID].position)/2
+	#mesh.position = (nodeList[firstID].position + nodeList[secondID].position)/2
 	
-	var distance = (nodeList[firstID].position.distance_to(nodeList[secondID].position))
-	scale.y = distance * 2
-	if (mesh.position != nodeList[firstID].position):
-		look_at_from_position(position, nodeList[secondID].position, Vector3(0, 1, 0.001))
+	#var distance = (nodeList[firstID].position.distance_to(nodeList[secondID].position))
+	#scale.y = distance * 2
+	#if (mesh.position != nodeList[firstID].position):
+		#look_at_from_position(position, nodeList[secondID].position, Vector3(0, 1, 0.001))
 	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
-	rotation_degrees.x += 90
+	#rotation_degrees.x += 90
+	mesh.material_override = load("res://whiteMat.tres")
 	
-	
-	add_child(mesh)
 	nodeList[firstID].connections.append(mesh)
 	nodeList[secondID].connections.append(mesh)
+	add_child(mesh)
 
 
 
@@ -153,50 +148,50 @@ func _process(delta: float):
 		# We keep Node 0 at (0,0,0) so the graph doesn't drift away
 		if node.ID == 0:
 			continue
-
+		
 		var total_force = Vector3.ZERO
-
+		
 		# 2. REPULSION: Push away from EVERY other node
 		for other in nodeList:
 			if node == other: continue
 			var diff = node.position - other.position
 			var dist = diff.length()	
 			
-			if dist < 0.1: # Anti-overlap
-				total_force += Vector3(randf(), randf(), randf()) * 5.0
-			elif dist < 30.0:
+			if dist < 0.2: # Anti-overlap
+				total_force += Vector3(randf(), randf(), randf()) * 500.0
+			elif dist < 140.0:
 				total_force += diff.normalized() * (repulsion_strength / (dist * dist))
-
+		
 		# 3. ATTRACTION: Pull toward CONNECTED nodes
 		for line in node.connections:
 		# Determine which end of the line is the neighbor
 			var neighbor_id = line.nodeID1 if line.nodeID2 == node.ID else line.nodeID2
 			var neighbor = nodeList[neighbor_id]
-
+			
 			var diff = neighbor.position - node.position
 			var dist = diff.length()
 			
 			# Spring Force: stiffness * (current_distance - desired_distance)
 			var displacement = dist - rest_length
 			total_force += diff.normalized() * (displacement * stiffness)
-
+		
 		# 4. VELOCITY & LERP
 		# Apply the accumulated forces to velocity
 		node.velocity += total_force * delta
-		node.velocity *= damping # Apply friction
-
+		if node.velocity != Vector3.ZERO:
+			node.velocity *= damping # Apply friction
+		
 		# Calculate the "ideal" next position
 		var target_position = node.position + (node.velocity * delta)
-
+		
 		# USE LERP: Smoothly move from current position toward target
 		node.position = node.position.lerp(target_position, lerp_speed)
-
+	
 	# 5. UPDATE LINE VISUALS
 	# After all nodes have moved, update the lines to stay pinned
 	update_all_connections()
-	
-	
-	
+
+
 func update_all_connections():
 	for node in nodeList:
 		for line in node.connections:
@@ -204,17 +199,21 @@ func update_all_connections():
 			var n2 = nodeList[line.nodeID2]
 			
 			# Move the line to the midpoint between nodes
-			line.position = (n1.position + n2.position) / 2.0
+			var point = (n1.position + n2.position)
+			if point == Vector3.ZERO:
+				line.position = point
+			else:
+				line.position = point / 2.0
+				
 			
-			var dist = n1.position.distance_to(n2.position)
+			var dist = line.position.distance_to(n1.position)
 			
 			# Avoid errors if nodes are overlapping.
 			if dist > 0.05:
-				line.scale.y = dist / 2.0
+				line.scale.y = dist * 2.0
 				line.look_at_from_position(line.position, n1.position, Vector3.UP)
 				# Correction for mesh orientation.
 				line.rotation_degrees.x += 90
-
 
 
 

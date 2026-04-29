@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://cfi7n5nutdov2" path="res://node_line.gd" id="1_bed78"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ugv4f"]
+height = 1.0
 
 [node name="NodeLine" type="MeshInstance3D" unique_id=2064153308]
 mesh = SubResource("CylinderMesh_ugv4f")
