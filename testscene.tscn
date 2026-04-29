@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b3tetjpj53ts2"]
+[gd_scene format=3 uid="uid://55jfvroefcs4"]
 
 [ext_resource type="PackedScene" uid="uid://317hvtofyeyj" path="res://MainScreen.tscn" id="1_44gc5"]
 [ext_resource type="PackedScene" uid="uid://bfuehtbypj6sk" path="res://multi_nodes.tscn" id="2_612pj"]
@@ -16,5 +16,7 @@ grow_vertical = 2
 scale = Vector2(0.59, 0.59)
 
 [node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=1237155874]
+handle_input_locally = false
+render_target_update_mode = 4
 
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]

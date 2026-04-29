@@ -4,7 +4,7 @@ extends Area3D
 
 var ID: int
 var boardMatrix: Array[Array]
-var connections: Array[Graphnode]
+var connections: Array[NodeLine]
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
