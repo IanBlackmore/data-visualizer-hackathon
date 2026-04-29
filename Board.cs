@@ -36,12 +36,13 @@ public partial class Board : Control
 	{
 		Queue<byte[,]> queue = new();
 		Dictionary<string, string> visited = new();
-		string firstWinHash = null; // Defined here so it's in scope for the whole method
-		bool firstWinHashFound = false;
+		var adjacency = new Godot.Collections.Dictionary();
+		var winStates = new Godot.Collections.Array();
+		string firstWinHash = null;
 
 		byte[,] startState = GetState2D();
 		string startHash = serializeState(startState);
-		
+
 		queue.Enqueue(startState);
 		visited.Add(startHash, null);
 
@@ -55,24 +56,35 @@ public partial class Board : Control
 			if (IsWinState(current) && firstWinHash == null)
 			{
 				firstWinHash = currentHash;
+				winStates.Add(currentHash);
 				GD.Print("Shortest path found! Continuing to map remaining states...");
 			}
 
+			var neighbors = new Godot.Collections.Array();
 			foreach (byte[,] next in GetNextStates(current))
 			{
 				string nextHash = serializeState(next);
+				neighbors.Add(nextHash);
 				if (!visited.ContainsKey(nextHash))
 				{
 					visited.Add(nextHash, currentHash);
 					queue.Enqueue(next);
 				}
 			}
+			adjacency[currentHash] = neighbors;
 		}
 
-		// Reconstruct and Play if a solution was found
+		GD.Print($"Discovery complete. {visited.Count} states, {winStates.Count} win states.");
+
+		var graphData = new Godot.Collections.Dictionary();
+		graphData["adjacency"] = adjacency;
+		graphData["win_states"] = winStates;
+		graphData["start"] = startHash;
+		GetTree().Root.SetMeta("klotski_graph", graphData);
+		GetNode("/root/AutoloadSignals").EmitSignal("graph_ready");
+
 		if (firstWinHash != null)
 		{
-			GD.Print($"Discovery complete. Total states in graph: {visited.Count}");
 			var path = ReconstructPath(visited, firstWinHash);
 			PrintMoveSequence(path);
 			PlaySolution(path);
