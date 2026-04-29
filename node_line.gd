@@ -21,10 +21,8 @@ func _process(_delta):
 	pass
 
 func set_connection_shortpath():
-	var cylinder: CylinderMesh = CylinderMesh.new()
-	cylinder.height = storedSize
-	cylinder.material = load("res://greenLineMat.tres")
-	mesh = cylinder
+	material_override = load("res://greenLineMat.tres")
+	
 
 func set_connection_geminipath():
 	var cylinder: CylinderMesh = CylinderMesh.new()

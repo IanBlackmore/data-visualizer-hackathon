@@ -87,6 +87,7 @@ render_target_update_mode = 4
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="." unique_id=809887455]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 80)
 script = ExtResource("3_612pj")
 
 [node name="Camera3D" type="Camera3D" parent="CharacterBody3D" unique_id=1416676607]

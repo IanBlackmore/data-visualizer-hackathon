@@ -20,6 +20,7 @@ func _ready():
 		child.queue_free()
 	currentID = 0
 	AutoloadSignals.graph_ready.connect(_on_graph_ready)
+	AutoloadSignals.winning_path.connect(_on_path_ready)
 	# Board may have already finished BFS before this node was ready
 	if get_tree().root.has_meta("klotski_graph"):
 		_on_graph_ready()
@@ -150,3 +151,40 @@ func board_to_key(board: Array[Array]) -> String:
 	for row in board:
 		parts.append(",".join(row.map(func(v): return str(v))))
 	return "|".join(parts)
+
+
+func _on_path_ready(path: Array[String]):
+	var trueArray: Array[Array] = []
+	print("path is")
+	print(path)
+	for stri in path:
+		var intermediate : Array[Array] = []
+		for j in range(5):
+			var intArr : Array[int] = []
+			for i in range(4):
+				if stri[i+(j*4)] == '.':
+					intArr.append(0)
+				else:
+					intArr.append(int(stri[j*4+i]))
+			intermediate.append(intArr)
+		print(intermediate)
+		trueArray.append(intermediate)
+	find_good_path(trueArray)
+
+func find_good_path(trueArray: Array[Array]):
+	var i: int = 0
+	var counter: int = 0
+	while nodeList[i].isWinningPosition == false:
+		for connection in nodeList[i].connections:
+			if nodeList[connection.nodeID1].boardMatrix == trueArray[counter]:
+				i = connection.nodeID1
+				print("set")
+				connection.set_connection_shortpath()
+				counter += 1
+				break
+			elif nodeList[connection.nodeID2].boardMatrix == trueArray[counter]:
+				i = connection.nodeID2
+				print("set")
+				connection.set_connection_shortpath()
+				counter += 1
+				break

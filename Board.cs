@@ -121,6 +121,8 @@ public partial class Board : Control
 			current = visited[current];
 		}
 		path.Reverse();
+		string[] arr = path.ToArray();
+		GetNode("/root/AutoloadSignals").EmitSignal("winning_path", arr);
 		return path;
 	}
 	
