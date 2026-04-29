@@ -7,7 +7,8 @@ public partial class BottomBar : Control
 
 	public override void _Ready()
 	{
-		_board = (Board)GetTree().Root.GetMeta("board");
+		// Go up to the root, then down the path to Board
+		_board = GetNode<Board>("/root/Testscene/SubViewportContainer/SubViewport/Node2D/CanvasLayer/Control/Board");
 		GD.Print("Board reference: ", _board);
 	}
 
