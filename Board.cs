@@ -295,11 +295,12 @@ public partial class Board : Control
 
 				var block = ExtractBlockFromMatrix(matrix, id, x, y, visited);
 
+				Color color = (block.id == "1") ? _heroColor : _neutralBlockColor;
 				CreateBlock(
 					block.id,
 					block.pos,
 					block.size,
-					_neutralBlockColor
+					color
 				);
 			}
 		}
