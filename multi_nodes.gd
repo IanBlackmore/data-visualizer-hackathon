@@ -16,10 +16,10 @@ func _ready():
 	run_test()
 
 func run_test():
-	create_new_node(0,0,0)
+	create_new_node(0,0,-30)
 	await get_tree().create_timer(3.0).timeout
 	print("Creating second node")
-	create_new_node(10,10,10)
+	create_new_node(10,10,-20)
 	
 	await get_tree().create_timer(3.0).timeout
 	
