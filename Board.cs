@@ -23,7 +23,7 @@ public partial class Board : Control
 	public override void _Ready()
 	{
 		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
-		LoadMatrixFromFile("res://Layouts/level1.json");
+		LoadMatrixFromFile("res://Layouts/level2.json");
 		QueueRedraw();
 		
 		GD.Print("Board ready. Launching BFS Solver...");
@@ -37,6 +37,7 @@ public partial class Board : Control
 		Queue<byte[,]> queue = new();
 		Dictionary<string, string> visited = new();
 		string firstWinHash = null; // Defined here so it's in scope for the whole method
+		bool firstWinHashFound = false;
 
 		byte[,] startState = GetState2D();
 		string startHash = serializeState(startState);
@@ -138,6 +139,7 @@ public partial class Board : Control
 		GD.Print($"Playing back {path.Count - 1} moves...");
 		for (int i = 1; i < path.Count; i++)
 		{
+			await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
 			ApplyStateToBoard(path[i]);
 			await ToSignal(GetTree().CreateTimer(0.3f), "timeout");
 		}

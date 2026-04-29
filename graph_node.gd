@@ -19,8 +19,7 @@ func _ready():
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	global_position += velocity * delta
-	velocity *= 0.9
+	pass
 
 func set_board_matrix(matrix: Array[Array]):
 	boardMatrix = matrix

@@ -1,5 +1,12 @@
 class_name GraphNodeTree
 extends Node3D
+
+var repulsion_strength: float = 300.0
+var stiffness: float = 8.0
+var rest_length: float = 12.0
+var damping: float = 0.85  # Slows nodes down so they settle
+var lerp_speed: float = 0.1 # The "smoothness" factor
+
 const graphNode: PackedScene = preload("res://graphNode.tscn")
 const nodeLine: PackedScene = preload("res://nodeLine.tscn")
 
@@ -124,6 +131,14 @@ func create_connection(firstID: int, secondID: int):
 	var meshPoint: Vector3 = (nodeList[firstID].position + nodeList[secondID].position)/2
 	var mesh: NodeLine = nodeLine.instantiate()
 	mesh.create_line(nodeList[firstID].position, nodeList[secondID].position, firstID, secondID)
+	mesh.position = (nodeList[firstID].position + nodeList[secondID].position)/2
+	
+	var distance = (nodeList[firstID].position.distance_to(nodeList[secondID].position))
+	scale.y = distance * 2
+	if (mesh.position != nodeList[firstID].position):
+		look_at_from_position(position, nodeList[secondID].position, Vector3(0, 1, 0.001))
+	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
+	rotation_degrees.x += 90
 	
 	
 	add_child(mesh)
@@ -132,39 +147,73 @@ func create_connection(firstID: int, secondID: int):
 
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	var totalforce = Vector3.ZERO
+func _process(delta: float):
 	for node in nodeList:
-		for i in range(nodeList.size()):
-			if i != node.ID:
-				var distance: float = node.position.distance_to(nodeList[i].position)
-				if distance < 0.1:
-					totalforce += Vector3(randf(), randf(), randf()) * 10
-				elif distance > 50:
-					var strength = 1 / (distance * distance)
-					totalforce += (node.position - nodeList[i].position).normalized() * strength
-		
-		
-		for line in node.connections:
-			var dir = node.position - nodeList[line.nodeID2].position
-			line.create_line(node.position, nodeList[line.nodeID2].position, node.ID, nodeList[line.nodeID2].ID)
-			if dir == Vector3.ZERO:
-				line.create_line(node.position, nodeList[line.nodeID1].position, node.ID, nodeList[line.nodeID1].ID)
-				dir = node.position - nodeList[line.nodeID1].position
-			
-			var distance = dir.length()
-			if distance < 0.1:
-				totalforce += Vector3(randf(), randf(), randf()) * 10
-			elif distance > 50:
-				var strength = 1 / (distance * distance)
-				totalforce += (node.position - nodeList[line.nodeID1].position).normalized() * strength
-			node.velocity += totalforce * delta
-		
-	
-	
-	
+		# 1. SKIP THE ANCHOR
+		# We keep Node 0 at (0,0,0) so the graph doesn't drift away
+		if node.ID == 0:
+			continue
 
+		var total_force = Vector3.ZERO
+
+		# 2. REPULSION: Push away from EVERY other node
+		for other in nodeList:
+			if node == other: continue
+			var diff = node.position - other.position
+			var dist = diff.length()	
+			
+			if dist < 0.1: # Anti-overlap
+				total_force += Vector3(randf(), randf(), randf()) * 5.0
+			elif dist < 30.0:
+				total_force += diff.normalized() * (repulsion_strength / (dist * dist))
+
+		# 3. ATTRACTION: Pull toward CONNECTED nodes
+		for line in node.connections:
+		# Determine which end of the line is the neighbor
+			var neighbor_id = line.nodeID1 if line.nodeID2 == node.ID else line.nodeID2
+			var neighbor = nodeList[neighbor_id]
+
+			var diff = neighbor.position - node.position
+			var dist = diff.length()
+			
+			# Spring Force: stiffness * (current_distance - desired_distance)
+			var displacement = dist - rest_length
+			total_force += diff.normalized() * (displacement * stiffness)
+
+		# 4. VELOCITY & LERP
+		# Apply the accumulated forces to velocity
+		node.velocity += total_force * delta
+		node.velocity *= damping # Apply friction
+
+		# Calculate the "ideal" next position
+		var target_position = node.position + (node.velocity * delta)
+
+		# USE LERP: Smoothly move from current position toward target
+		node.position = node.position.lerp(target_position, lerp_speed)
+
+	# 5. UPDATE LINE VISUALS
+	# After all nodes have moved, update the lines to stay pinned
+	update_all_connections()
+	
+	
+	
+func update_all_connections():
+	for node in nodeList:
+		for line in node.connections:
+			var n1 = nodeList[line.nodeID1]
+			var n2 = nodeList[line.nodeID2]
+			
+			# Move the line to the midpoint between nodes
+			line.position = (n1.position + n2.position) / 2.0
+			
+			var dist = n1.position.distance_to(n2.position)
+			
+			# Avoid errors if nodes are overlapping.
+			if dist > 0.05:
+				line.scale.y = dist / 2.0
+				line.look_at_from_position(line.position, n1.position, Vector3.UP)
+				# Correction for mesh orientation.
+				line.rotation_degrees.x += 90
 
 
 
