@@ -1,7 +1,6 @@
 extends CharacterBody3D
 
-@export var speed := 5.0
-@export var mouse_sensitivity := 2.0
+@export var speed := 25.0
 @export var rotation_speed := 1.5
 
 var yaw := 0.0
@@ -13,7 +12,7 @@ func _physics_process(delta):
 	handle_movement(delta)
 	handle_rotation(delta)
 
-func handle_movement(delta):
+func handle_movement(_delta):
 	var direction = Vector3.ZERO
 
 	if Input.is_action_pressed("move_forward"):

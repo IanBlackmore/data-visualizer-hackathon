@@ -13,6 +13,7 @@ func _ready():
 func changeHeight(size: float):
 	var cylinder: CylinderMesh = CylinderMesh.new()
 	cylinder.height = size
+	cylinder.material = load("res://whiteMat.tres")
 	storedSize = size
 	mesh = cylinder
 

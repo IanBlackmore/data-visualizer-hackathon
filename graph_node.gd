@@ -1,14 +1,16 @@
 class_name Graphnode
 extends Area3D
 
-
 var ID: int
 var boardMatrix: Array[Array]
 var connections: Array[NodeLine]
+var prevMat: Material
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	pass # Replace with function body.
+	$MeshInstance3D.material_override = load("res://whiteMat.tres")
+	prevMat = load("res://whiteMat.tres")
+	AutoloadSignals.nodeSelected.connect(_on_node_selected)
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -33,8 +35,14 @@ func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 		#do other stuff to display current instance of graph
 		set_node_selected()
 
+func _on_node_selected():
+	$MeshInstance3D.material_override = prevMat
+	print(prevMat)
+
 func set_node_selected():
+	AutoloadSignals.nodeSelected.emit()
 	$MeshInstance3D.material_override = load("res://redLineMat.tres")
 
 func set_node_finish():
 	$MeshInstance3D.material_override = load("res://greenLineMat.tres")
+	prevMat = load("res://greenLineMat.tres")

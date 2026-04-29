@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cgjet72u8apvb"]
+
+[ext_resource type="Shader" uid="uid://csmwwqgapjxom" path="res://whiteShade.gdshader" id="1_kbh0o"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_kbh0o")
+shader_parameter/glow_strength = 3.0
