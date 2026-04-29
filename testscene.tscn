@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://317hvtofyeyj" path="res://MainScreen.tscn" id="1_44gc5"]
 [ext_resource type="PackedScene" uid="uid://bfuehtbypj6sk" path="res://multi_nodes.tscn" id="2_612pj"]
 [ext_resource type="Script" uid="uid://df1ir2x2fsvmj" path="res://character_body_3d.gd" id="3_612pj"]
+[ext_resource type="Script" uid="uid://c1yagmrsg6krr" path="res://BottomBar.cs" id="4_612pj"]
 
 [sub_resource type="Environment" id="Environment_612pj"]
 background_mode = 1
@@ -12,16 +13,74 @@ background_energy_multiplier = 0.0
 
 [node name="MultiNodes" parent="." unique_id=914955705 instance=ExtResource("2_612pj")]
 
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="." unique_id=2032393276]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 524.0
+offset_right = 768.0
+offset_bottom = 67.86426
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.59, 0.59)
+size_flags_horizontal = 4
+size_flags_vertical = 10
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer2" unique_id=1731576058]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(1920, 153)
+render_target_update_mode = 4
+
+[node name="BottomBar" type="Control" parent="SubViewportContainer2/SubViewport" unique_id=2008402127]
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+offset_bottom = -100.0
+grow_vertical = 0
+script = ExtResource("4_612pj")
+
+[node name="Scn1Btn" type="Button" parent="SubViewportContainer2/SubViewport/BottomBar" unique_id=422109866]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 40.0
+offset_right = 152.0
+offset_bottom = 96.0
+action_mode = 0
+text = "Scene 1"
+
+[node name="Scn2Btn" type="Button" parent="SubViewportContainer2/SubViewport/BottomBar" unique_id=1330910682]
+layout_mode = 0
+offset_left = 168.0
+offset_top = 40.0
+offset_right = 297.0
+offset_bottom = 96.0
+text = "Scene 2"
+
+[node name="AskBtn" type="Button" parent="SubViewportContainer2/SubViewport/BottomBar" unique_id=1999396616]
+layout_mode = 0
+offset_left = 1733.8984
+offset_top = 13.220423
+offset_right = 1917.8984
+offset_bottom = 93.22042
+text = "Export JSON"
+
 [node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=281403973]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = -652.0
+offset_bottom = -148.0
 grow_horizontal = 2
 grow_vertical = 2
-scale = Vector2(0.59, 0.59)
+scale = Vector2(0.735, 0.735)
 
 [node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=1237155874]
+transparent_bg = true
 handle_input_locally = false
+size = Vector2i(500, 500)
 render_target_update_mode = 4
 
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
@@ -33,3 +92,7 @@ script = ExtResource("3_612pj")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=836662336]
 environment = SubResource("Environment_612pj")
+
+[connection signal="pressed" from="SubViewportContainer2/SubViewport/BottomBar/Scn1Btn" to="SubViewportContainer2/SubViewport/BottomBar" method="_on_scn_1_btn_pressed"]
+[connection signal="pressed" from="SubViewportContainer2/SubViewport/BottomBar/Scn2Btn" to="SubViewportContainer2/SubViewport/BottomBar" method="_on_scn_2_btn_pressed"]
+[connection signal="pressed" from="SubViewportContainer2/SubViewport/BottomBar/AskBtn" to="SubViewportContainer2/SubViewport/BottomBar" method="_on_ask_btn_pressed"]
