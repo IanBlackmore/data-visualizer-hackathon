@@ -5,9 +5,11 @@ var ID: int
 var boardMatrix: Array[Array]
 var connections: Array[NodeLine]
 var prevMat: Material
+var isWinningPosition: bool
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	isWinningPosition = false
 	$MeshInstance3D.material_override = load("res://whiteMat.tres")
 	prevMat = load("res://whiteMat.tres")
 	AutoloadSignals.nodeSelected.connect(_on_node_selected)
@@ -44,5 +46,6 @@ func set_node_selected():
 	$MeshInstance3D.material_override = load("res://redLineMat.tres")
 
 func set_node_finish():
+	isWinningPosition = true
 	$MeshInstance3D.material_override = load("res://greenLineMat.tres")
 	prevMat = load("res://greenLineMat.tres")
