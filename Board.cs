@@ -31,6 +31,8 @@ public partial class Board : Control
 		LoadMatrixFromFile("res://Layouts/level1.json");
 		QueueRedraw();
 		
+		GD.Print("Block ready: ", Name); //debugging 
+		
 		GetTree().Root.SetMeta("board", this);
 	}
 
@@ -288,9 +290,18 @@ public partial class Board : Control
 	
 	public void LoadMatrixLayout(int[][] matrix)
 	{
+		if (_selectedBlock != null)
+		{
+			if (IsInstanceValid(_selectedBlock))
+				_selectedBlock.SetHighlight(false);
+			_selectedBlock = null;
+		}
 		// Remove existing blocks
 		foreach (var b in _blocks)
-			b.QueueFree();
+		{
+			if (IsInstanceValid(b))
+				b.QueueFree();
+		}
 		_blocks.Clear();
 
 		// Update grid size
