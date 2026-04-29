@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-@export var speed := 25.0
+@export var speed := 45.0
 @export var rotation_speed := 1.5
 
 var yaw := 0.0
@@ -23,6 +23,10 @@ func handle_movement(_delta):
 		direction -= transform.basis.x
 	if Input.is_action_pressed("move_right"):
 		direction += transform.basis.x
+	if Input.is_action_pressed("move_up"):
+		direction += transform.basis.y
+	if Input.is_action_pressed("move_down"):
+		direction -= transform.basis.y
 
 	direction = direction.normalized()
 

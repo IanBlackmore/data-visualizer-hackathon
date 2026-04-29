@@ -17,56 +17,27 @@ func _ready():
 
 func run_test():
 	# Matrix 1 (starting position)
-	var matrix1: Array[Array] = [
-		[1, 1, 2, 2],
-		[1, 1, 2, 2],
-		[3, 4, 5, 6],
-		[3, 7, 7, 6],
-		[0, 8, 9, 0]
+	var matrix: Array[Array] = [
+		[0, 2, 1, 1],
+		[0, 2, 0, 0],
+		[0, 0, 0, 0],
+		[0, 0, 0, 0],
+		[0, 0, 0, 0]
 	]
-	
-	# Matrix 2 (one move away from Matrix 1)
-	var matrix2: Array[Array] = [
-		[1, 1, 2, 2],
-		[1, 1, 2, 2],
-		[3, 4, 5, 0],
-		[3, 7, 7, 6],
-		[0, 8, 9, 6]
-	]
-	
-	# Matrix 3 (completely different position)
-	var matrix3: Array[Array] = [
-		[2, 2, 1, 0],
-		[2, 2, 1, 1],
-		[3, 3, 4, 5],
-		[6, 7, 7, 5],
-		[0, 8, 9, 0]
-	]
-	var matrix4: Array[Array] = [
-		[2, 2, 1, 0],
-		[2, 2, 1, 0],
-		[3, 3, 4, 5],
-		[6, 7, 7, 5],
-		[0, 8, 9, 1]
-	]
-	
-	
-	create_new_node(0,0,-30, matrix1)
-	await get_tree().create_timer(3.0).timeout
-	print("Creating second node")
-	create_new_node(10,10,-20, matrix2)
-	
-	await get_tree().create_timer(3.0).timeout
-	
-	create_new_node(10,30,-20, matrix3)
-	#print("Connecting line")
-	
-	await get_tree().create_timer(3.0).timeout
-	#create_connection(1,0)
-	create_new_node(30,30,-20, matrix4)
-	
-	nodeList[0].set_node_finish()
-	nodeList[0].connections[0].set_connection_shortpath()
+	var result = generate_all_states(matrix)
+	var xInc: int = 10
+	var yInc: int = 10
+	var zInc: int = 10
+	# goated seed for this example actually
+	seed(220)
+	for item in result:
+		create_new_node(xInc, yInc, zInc, item)
+		if randi() % 2 == 1:
+			xInc += 10
+		elif randi() % 2 == 1:
+			yInc += 10
+		elif randi() % 2 == 1:
+			zInc += 10
 
 
 
@@ -135,6 +106,8 @@ func create_connection(firstID: int, secondID: int):
 	var meshPoint: Vector3 = (nodeList[firstID].position + nodeList[secondID].position)/2
 	var mesh: NodeLine = nodeLine.instantiate()
 	mesh.position = meshPoint
+	if nodeList[firstID].position == nodeList[secondID].position:
+		nodeList[firstID].position *= 2
 	mesh.changeHeight(nodeList[firstID].position.distance_to(nodeList[secondID].position))
 	mesh.look_at_from_position(mesh.position, nodeList[firstID].position)
 	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
@@ -151,3 +124,136 @@ func create_connection(firstID: int, secondID: int):
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	pass
+
+
+
+
+
+
+
+
+
+func board_to_key(board: Array[Array]) -> String:
+	var parts := []
+	for row in board:
+		parts.append(",".join(row.map(func(v): return str(v))))
+	return "|".join(parts)
+
+
+func clone_board(board: Array[Array]) -> Array[Array]:
+	var new_board : Array[Array]= []
+	for row in board:
+		new_board.append(row.duplicate())
+	return new_board
+
+
+func get_piece_cells(board, id):
+	var cells := []
+	for y in range(board.size()):
+		for x in range(board[y].size()):
+			if board[y][x] == id:
+				cells.append(Vector2i(x, y))
+	return cells
+
+
+func get_all_piece_ids(board):
+	var ids := {}
+	for row in board:
+		for v in row:
+			if v != 0:
+				ids[v] = true
+	return ids.keys()
+
+
+func get_piece_size(cells):
+	var min_x = cells[0].x
+	var max_x = cells[0].x
+	var min_y = cells[0].y
+	var max_y = cells[0].y
+	
+	for c in cells:
+		min_x = min(min_x, c.x)
+		max_x = max(max_x, c.x)
+		min_y = min(min_y, c.y)
+		max_y = max(max_y, c.y)
+	
+	return Vector2i(max_x - min_x + 1, max_y - min_y + 1)
+
+
+func get_valid_moves(board):
+	var results := []
+	var ids = get_all_piece_ids(board)
+	
+	for id in ids:
+		var cells = get_piece_cells(board, id)
+		var size = get_piece_size(cells)
+		
+		var directions := []
+		
+		# movement rules
+		if size.x > size.y:
+			directions = [Vector2i.LEFT, Vector2i.RIGHT]
+		elif size.y > size.x:
+			directions = [Vector2i.UP, Vector2i.DOWN]
+		else:
+			continue # shouldn't happen (only 2x1 or 1x2)
+		
+		for dir in directions:
+			if can_move(board, id, cells, dir):
+				var new_board = apply_move(board, id, cells, dir)
+				results.append(new_board)
+	
+	return results
+
+
+func can_move(board, id, cells, dir):
+	for c in cells:
+		var nx = c.x + dir.x
+		var ny = c.y + dir.y
+	
+		if ny < 0 or ny >= board.size():
+			return false
+		if nx < 0 or nx >= board[0].size():
+			return false
+		
+		if board[ny][nx] != 0 and board[ny][nx] != id:
+			return false
+	
+	return true
+
+
+func apply_move(board, id, cells, dir):
+	var new_board = clone_board(board)
+
+	# clear old
+	for c in cells:
+		new_board[c.y][c.x] = 0
+
+	# place new
+	for c in cells:
+		new_board[c.y + dir.y][c.x + dir.x] = id
+
+	return new_board
+
+
+func generate_all_states(start_board):
+	var visited := {}
+	var queue := []
+	
+	var start_key = board_to_key(start_board)
+	visited[start_key] = start_board
+	queue.append(start_board)
+	
+	while queue.size() > 0:
+		var current = queue.pop_front()
+	
+		var next_states = get_valid_moves(current)
+	
+		for state in next_states:
+			var key = board_to_key(state)
+	
+			if not visited.has(key):
+				visited[key] = state
+				queue.append(state)
+	
+	return visited.values()

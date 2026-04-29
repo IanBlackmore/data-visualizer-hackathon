@@ -39,11 +39,11 @@ func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 
 func _on_node_selected():
 	$MeshInstance3D.material_override = prevMat
-	print(prevMat)
 
 func set_node_selected():
 	AutoloadSignals.nodeSelected.emit()
 	$MeshInstance3D.material_override = load("res://redLineMat.tres")
+	print(boardMatrix)
 
 func set_node_finish():
 	isWinningPosition = true
