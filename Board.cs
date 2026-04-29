@@ -15,6 +15,9 @@ public partial class Board : Control
 	{
 		// For debugging, let's spawn a test layout
 		SpawnInitialLayout();
+		
+		GD.Print("Board ready. Launching BFS Solver...");
+		SolvePuzzle();
 	}
 
 	private void SpawnInitialLayout()
