@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://317hvtofyeyj"]
+
+[ext_resource type="Script" uid="uid://c57ks7m2ul42s" path="res://Board.cs" id="1_cshku"]
+[ext_resource type="PackedScene" uid="uid://bkcwp3cqx57qr" path="res://klotski_block.tscn" id="2_i8u74"]
+
+[node name="Node2D" type="Node2D" unique_id=2113247475]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1999826060]
+
+[node name="Control" type="Control" parent="CanvasLayer" unique_id=2068842506]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1154.0
+offset_bottom = 662.0
+
+[node name="Board" type="Control" parent="CanvasLayer/Control" unique_id=718958124]
+anchors_preset = 0
+script = ExtResource("1_cshku")
+BlockTemplate = ExtResource("2_i8u74")

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bkcwp3cqx57qr"]
+
+[ext_resource type="Script" uid="uid://dnsh21bnspqfx" path="res://KlotskiBlock.cs" id="1_v8a2l"]
+
+[node name="KlotskiBlock" type="Panel" unique_id=1602855830]
+script = ExtResource("1_v8a2l")
