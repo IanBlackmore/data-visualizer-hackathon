@@ -31,3 +31,10 @@ func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		print("Shape " + str(ID) + " Clicked!")
 		#do other stuff to display current instance of graph
+		set_node_selected()
+
+func set_node_selected():
+	$MeshInstance3D.material_override = load("res://redLineMat.tres")
+
+func set_node_finish():
+	$MeshInstance3D.material_override = load("res://greenLineMat.tres")

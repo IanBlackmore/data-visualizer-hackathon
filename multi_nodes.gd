@@ -26,6 +26,10 @@ func run_test():
 	print("Connecting line")
 	
 	create_connection(1,0)
+	
+	
+	nodeList[0].set_node_finish()
+	nodeList[0].connections[0].set_connection_shortpath()
 
 
 

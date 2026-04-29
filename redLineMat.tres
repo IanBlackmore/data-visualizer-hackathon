@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bptvvnw7bsi5t"]
+
+[ext_resource type="Shader" uid="uid://cbnpq8a0rdny5" path="res://redLine.gdshader" id="1_68fi4"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_68fi4")
+shader_parameter/glow_strength = 3.0

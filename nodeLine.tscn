@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dt1133uivu7im"]
 
-[ext_resource type="Script" path="res://node_line.gd" id="1_bed78"]
+[ext_resource type="Script" uid="uid://cfi7n5nutdov2" path="res://node_line.gd" id="1_bed78"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ugv4f"]
 
