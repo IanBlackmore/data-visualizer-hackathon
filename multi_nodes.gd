@@ -36,18 +36,18 @@ func run_test():
 	for item in result:
 		var looper: bool = true
 		while looper == true:
-			if randi() % 2 == 1:
-				xInc += 5
-			elif randi() % 2 == 1:
-				yInc += 5
-			elif randi() % 2 == 1:
-				zInc += 5
-			elif randi() % 2 == 1:
-				xInc -= 5
-			elif randi() % 2 == 1:
-				yInc -= 5
-			elif randi() % 2 == 1:
-				zInc -= 5
+			if randi() % 7 == 1:
+				xInc += 10
+			elif randi() % 7 == 1:
+				yInc += 10
+			elif randi() % 7 == 1:
+				zInc += 10
+			elif randi() % 7 == 1:
+				xInc -= 10
+			elif randi() % 7 == 1:
+				yInc -= 10
+			elif randi() % 7 == 1:
+				zInc -= 10
 				if !positionList.has(Vector3(xInc,yInc,zInc)):
 					positionList.append(Vector3(xInc,yInc,zInc))
 					create_new_node(xInc, yInc, zInc, item)
