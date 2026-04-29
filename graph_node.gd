@@ -38,6 +38,7 @@ func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 		print("Shape " + str(ID) + " Clicked!")
 		#do other stuff to display current instance of graph
 		set_node_selected()
+		AutoloadSignals.updateBoard.emit(boardMatrix)
 
 func _on_node_selected():
 	$MeshInstance3D.material_override = prevMat
