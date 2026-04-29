@@ -3,8 +3,11 @@
 [ext_resource type="Script" uid="uid://bndpe2w3ipjc2" path="res://graph_node.gd" id="1_4xcok"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_ffhen"]
+radius = 1.5
 
 [sub_resource type="SphereMesh" id="SphereMesh_4xcok"]
+radius = 1.5
+height = 3.0
 
 [node name="graphNode" type="Area3D" unique_id=1921855394]
 script = ExtResource("1_4xcok")
