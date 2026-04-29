@@ -73,6 +73,7 @@ public partial class Board : Control
 		{
 			GD.Print($"Discovery complete. Total states in graph: {visited.Count}");
 			var path = ReconstructPath(visited, firstWinHash);
+			PrintMoveSequence(path);
 			PlaySolution(path);
 		}
 		else
@@ -92,6 +93,44 @@ public partial class Board : Control
 		}
 		path.Reverse();
 		return path;
+	}
+	
+	private void PrintMoveSequence(List<string> path)
+	{
+		GD.Print("\n--- MOVE SEQUENCE TO SOLUTION ---");
+		
+		for (int i = 1; i < path.Count; i++)
+		{
+			byte[,] prevState = DeserializeState(path[i - 1]);
+			byte[,] currState = DeserializeState(path[i]);
+			
+			var prevBlocks = FindBlocksInGrid(prevState);
+			var currBlocks = FindBlocksInGrid(currState);
+
+			foreach (var currB in currBlocks)
+			{
+				// Find the same block in the previous state to see if it moved
+				var prevB = prevBlocks.Find(b => b.Type == currB.Type);
+				if (prevB.Pos != currB.Pos)
+				{
+					Vector2I diff = currB.Pos - prevB.Pos;
+					string direction = GetDirectionName(diff);
+					char blockId = (char)currB.Type;
+					
+					GD.Print($"Step {i}: Block '{blockId}' moved {direction} to {currB.Pos}");
+				}
+			}
+		}
+		GD.Print("---------------------------------\n");
+	}
+
+	private string GetDirectionName(Vector2I dir)
+	{
+		if (dir == Vector2I.Up) return "UP";
+		if (dir == Vector2I.Down) return "DOWN";
+		if (dir == Vector2I.Left) return "LEFT";
+		if (dir == Vector2I.Right) return "RIGHT";
+		return dir.ToString();
 	}
 
 	private async void PlaySolution(List<string> path)
@@ -165,8 +204,10 @@ public partial class Board : Control
 	private bool IsWinState(byte[,] grid)
 	{
 		byte heroId = (byte)'1'; 
-		return grid[1, 3] == heroId && grid[2, 3] == heroId && 
-			   grid[1, 4] == heroId && grid[2, 4] == heroId;
+		if(grid[3,2] == heroId) {
+			return true;
+		}
+		return false;
 	}
 
 	// --- MOVEMENT LOGIC ---
