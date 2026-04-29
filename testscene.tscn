@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://317hvtofyeyj" path="res://MainScreen.tscn" id="1_44gc5"]
 [ext_resource type="PackedScene" uid="uid://bfuehtbypj6sk" path="res://multi_nodes.tscn" id="2_612pj"]
+[ext_resource type="Script" uid="uid://c1yagmrsg6krr" path="res://BottomBar.cs" id="3_612pj"]
 
 [node name="Testscene" type="Node" unique_id=1622659957]
 
@@ -20,3 +21,44 @@ handle_input_locally = false
 render_target_update_mode = 4
 
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1599330267]
+
+[node name="BottomBar" type="Control" parent="UI" unique_id=575288514]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -112.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("3_612pj")
+
+[node name="Scn1Btn" type="Button" parent="UI/BottomBar" unique_id=1942309486]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 40.0
+offset_right = 152.0
+offset_bottom = 96.0
+action_mode = 0
+text = "Scene 1"
+
+[node name="Scn2Btn" type="Button" parent="UI/BottomBar" unique_id=1787279898]
+layout_mode = 0
+offset_left = 168.0
+offset_top = 40.0
+offset_right = 297.0
+offset_bottom = 96.0
+text = "Scene 2"
+
+[node name="AskBtn" type="Button" parent="UI/BottomBar" unique_id=1111819081]
+layout_mode = 0
+offset_left = 928.0
+offset_right = 1112.0
+offset_bottom = 80.0
+text = "Export JSON"
+
+[connection signal="pressed" from="UI/BottomBar/Scn1Btn" to="UI/BottomBar" method="_on_scn_1_btn_pressed"]
+[connection signal="pressed" from="UI/BottomBar/Scn2Btn" to="UI/BottomBar" method="_on_scn_2_btn_pressed"]
+[connection signal="pressed" from="UI/BottomBar/AskBtn" to="UI/BottomBar" method="_on_ask_btn_pressed"]

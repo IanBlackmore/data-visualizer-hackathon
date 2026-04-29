@@ -1,65 +1,193 @@
 using Godot;
+using System;
 
 public partial class KlotskiBlock : Panel
 {
-	public string ID;
-	public Vector2I GridPos;
-	public Vector2I BlockSize;
-	public int CellSize = 100;
+	public string ID { get; private set; }
+	public Vector2I GridPos { get; private set; }
+	public Vector2I BlockSize { get; private set; }
+	public Board Board { get; set; }
 
-	// This now accepts 5 arguments: string, Vector2I, Vector2I, int, Color
+	private int _cellSize;
+	private Color _baseColor;
+	private Tween _activeTween;
+	private AnimatedSprite2D _sprite;
+	private bool _isHero;
+
+	private Vector2 _boardOffset = Vector2.Zero;
+
+	private static readonly string[] NormalColors =
+	{
+		"purple",
+		"cyan",
+		"yellow"
+	};
+
 	public void Setup(string id, Vector2I pos, Vector2I size, int cellSize, Color color)
+	{
+		Setup(id, pos, size, cellSize, color, Vector2.Zero);
+	}
+
+	public void Setup(
+		string id,
+		Vector2I pos,
+		Vector2I size,
+		int cellSize,
+		Color color,
+		Vector2 boardOffset
+	)
 	{
 		ID = id;
 		GridPos = pos;
 		BlockSize = size;
-		CellSize = cellSize;
+		_cellSize = cellSize;
+		_baseColor = color;
+		_boardOffset = boardOffset;
+		_isHero = id == "1";
 
-		// Apply the color to the Panel
+		Position = GridToPixel(GridPos);
+
+		Size = new Vector2(
+			BlockSize.X * _cellSize,
+			BlockSize.Y * _cellSize
+		);
+
+		CustomMinimumSize = Size;
+		MouseFilter = MouseFilterEnum.Stop;
+
 		var style = new StyleBoxFlat();
-		style.BgColor = color;
-		style.SetBorderWidthAll(2);
-		style.BorderColor = new Color(0, 0, 0, 0.3f); // Subtle dark border
+		style.BgColor = Colors.Transparent;
+		style.SetBorderWidthAll(0);
+		style.BorderColor = Colors.Transparent;
 		AddThemeStyleboxOverride("panel", style);
-		
-		this.SelfModulate = color; 
-		this.Show(); // Ensure it isn't hidden
 
-		UpdateVisuals();
+		LoadSprite(size, isWin: false);
+
+		QueueRedraw();
 	}
 
-	public void UpdateVisuals()
+	private Vector2 GridToPixel(Vector2I gridPos)
 	{
-		Vector2 pixelSize = (Vector2)BlockSize * CellSize;
-		
-		// Set EVERY size property Godot has
-		this.Size = pixelSize;
-		this.CustomMinimumSize = pixelSize;
-		this.Position = (Vector2)GridPos * CellSize;
-		
-		// Force the node to be at the front of the draw calls
-		this.ZIndex = 10; 
-		
-		GD.Print($"Block {ID} at {Position} with size {Size}"); 
+		return _boardOffset + new Vector2(
+			gridPos.X * _cellSize,
+			gridPos.Y * _cellSize
+		);
+	}
+
+	private void LoadSprite(Vector2I size, bool isWin)
+	{
+		string colorVariant = isWin
+			? "winning"
+			: (_isHero ? "green" : NormalColors[(int)GD.RandRange(0, NormalColors.Length - 1)]);
+
+		bool isHorizontal = size.X > size.Y;
+
+		Vector2I loadSize = isHorizontal
+			? new Vector2I(size.Y, size.X)
+			: size;
+
+		string pngName = $"res://Art/block_{loadSize.X}x{loadSize.Y}_{colorVariant}.png";
+
+		if (!ResourceLoader.Exists(pngName))
+		{
+			GD.PrintErr($"Sprite not found: {pngName}");
+			return;
+		}
+
+		if (_sprite != null && IsInstanceValid(_sprite))
+		{
+			_sprite.QueueFree();
+			_sprite = null;
+		}
+
+		_sprite = new AnimatedSprite2D();
+		AddChild(_sprite);
+
+		Texture2D tex = ResourceLoader.Load<Texture2D>(pngName);
+
+		int frameCount = isWin ? 6 : 3;
+		int frameWidth = tex.GetWidth() / frameCount;
+
+		var frames = new SpriteFrames();
+
+		if (!frames.HasAnimation("default"))
+			frames.AddAnimation("default");
+
+		for (int i = 0; i < frameCount; i++)
+		{
+			var frame = new AtlasTexture();
+			frame.Atlas = tex;
+			frame.Region = new Rect2(
+				i * frameWidth,
+				0,
+				frameWidth,
+				tex.GetHeight()
+			);
+
+			frames.AddFrame("default", frame);
+		}
+
+		frames.SetAnimationSpeed("default", isWin ? 10 : 8);
+
+		_sprite.SpriteFrames = frames;
+		_sprite.Animation = "default";
+
+		_sprite.Position = Size / 2f;
+		_sprite.RotationDegrees = isHorizontal ? 90 : 0;
+
+		_sprite.Play("default");
+	}
+
+	public void PlayWinAnimation()
+	{
+		LoadSprite(BlockSize, isWin: true);
+
+		MouseFilter = MouseFilterEnum.Ignore;
 	}
 
 	public void SlideTo(Vector2I newGridPos)
 	{
 		GridPos = newGridPos;
-		var tween = CreateTween();
-		tween.SetTrans(Tween.TransitionType.Quad);
-		tween.SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(this, "position", (Vector2)GridPos * CellSize, 0.15f);
+
+		Vector2 targetPosition = GridToPixel(GridPos);
+
+		if (_activeTween != null)
+			_activeTween.Kill();
+
+		_activeTween = CreateTween();
+		_activeTween.SetTrans(Tween.TransitionType.Quad);
+		_activeTween.SetEase(Tween.EaseType.Out);
+		_activeTween.TweenProperty(this, "position", targetPosition, 0.12);
 	}
 
-	// This allows the board to know which block you want to move
 	public override void _GuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left)
+		if (@event is InputEventMouseButton mouseEvent)
 		{
-			// Find the Board script in the hierarchy and tell it this block is selected
-			var board = GetParent<Board>();
-			board.SelectBlock(this);
+			if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
+			{
+				Board?.SelectBlock(this);
+				AcceptEvent();
+			}
 		}
+	}
+
+	public void SetHighlight(bool active)
+	{
+		// No white outline anymore.
+		// Board.cs can still call this safely, but nothing visual appears.
+		var style = new StyleBoxFlat();
+		style.BgColor = Colors.Transparent;
+		style.BorderColor = Colors.Transparent;
+		style.SetBorderWidthAll(0);
+
+		AddThemeStyleboxOverride("panel", style);
+
+		QueueRedraw();
+	}
+
+	public override void _Draw()
+	{
+		// Sprite handles visuals.
 	}
 }
