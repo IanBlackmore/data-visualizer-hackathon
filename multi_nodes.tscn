@@ -5,10 +5,8 @@
 
 [node name="MultiNodes" type="Node3D" unique_id=914955705]
 script = ExtResource("1_6f5ru")
-graphNode = ExtResource("2_7bqu2")
 
-[node name="Area3D" parent="." unique_id=1921855394 instance=ExtResource("2_7bqu2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7015003, 1.4986584, -1.8624613)
+[node name="graphNode" parent="." unique_id=1921855394 instance=ExtResource("2_7bqu2")]
 
-[node name="Area3D2" parent="." unique_id=1955413856 instance=ExtResource("2_7bqu2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2520695, 0.63641655, 1.9267411)
+[node name="graphNode2" parent="." unique_id=987467673 instance=ExtResource("2_7bqu2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.902431, 0.08471203, 1.5328703)
