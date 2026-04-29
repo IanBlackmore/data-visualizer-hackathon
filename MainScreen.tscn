@@ -9,9 +9,11 @@
 
 [node name="Control" type="Control" parent="CanvasLayer" unique_id=2068842506]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 1154.0
-offset_bottom = 662.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Board" type="Control" parent="CanvasLayer/Control" unique_id=718958124]
 anchors_preset = 0
