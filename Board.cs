@@ -692,23 +692,23 @@ public partial class Board : Control
 		return matrix;
 	}
 
-	public string ExportMatrixJson()
-	{
-		var outer = new Godot.Collections.Array();
+	// public string ExportMatrixJson()
+	// {
+	// 	var outer = new Godot.Collections.Array();
 
-		foreach (var row in ExportMatrixLayout())
-		{
-			var r = new Godot.Collections.Array();
+	// 	foreach (var row in ExportMatrixLayout())
+	// 	{
+	// 		var r = new Godot.Collections.Array();
 
-			foreach (int v in row)
-				r.Add(v);
+	// 		foreach (int v in row)
+	// 			r.Add(v);
 
-			outer.Add(r);
-		}
+	// 		outer.Add(r);
+	// 	}
 
-		var wrapper = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
-		return Json.Stringify(wrapper, "\t");
-	}
+	// 	var wrapper = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
+	// 	return Json.Stringify(wrapper, "\t");
+	// }
 
 	public void SaveMatrixToFile(string path)
 	{

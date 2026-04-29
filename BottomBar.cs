@@ -9,14 +9,18 @@ public partial class BottomBar : Control
 	[Export] public int ButtonSpacing = 28;
 	[Export] public bool AutoSolveAfterLevelLoad = true;
 	[Export] public string ExportPath = "res://Layouts/exported_level.json";
+	[Export] public string GeminiApiKey = "";
 
 	private Board _board;
+	private HttpRequest _geminiRequest;
 	private HBoxContainer _buttonRow;
 	private readonly Dictionary<Button, Tween> _buttonTweens = new();
 
 	public override void _Ready()
 	{
 		CallDeferred(nameof(Initialize));
+
+		_geminiRequest = GetNode<HttpRequest>("GeminiRequest");
 	}
 
 	private void Initialize()
@@ -53,7 +57,10 @@ public partial class BottomBar : Control
 	private void BuildVersionOneButtonsOnTestScene()
 	{
 		foreach (Node child in GetChildren())
+		{
+			if (child is HttpRequest) continue; // Don't free GeminiRequest
 			child.QueueFree();
+		}
 
 		AnchorLeft = 0f;
 		AnchorRight = 1f;
@@ -243,11 +250,68 @@ public partial class BottomBar : Control
 			return;
 		}
 
-		GD.Print("Ask Gemini pressed. Current board JSON:");
-		GD.Print(_board.ExportMatrixJson());
+		GD.Print("Ask Gemini pressed...");
+		
+		// Save and load current matrix json
+		_board?.SaveMatrixToFile("res://Layouts/exported_level.json");
+		string boardJson = _board.ExportMatrixJson();
 
-		_board.SaveMatrixToFile(ExportPath);
-		GD.Print($"Board exported to: {ExportPath}");
+		// Gemini API endpoint and key
+		string apiKey = LoadGeminiApiKey();
+
+		string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key="+apiKey;
+		string[] headers = { "Content-Type: application/json" };
+
+		// Prepare the prompt and request body
+		string prompt = 
+			$"hello gemini can you read this json and return it back to me with all 2's set to 6's?\n\n{boardJson}";
+		string escapedPrompt = System.Text.Json.JsonSerializer.Serialize(prompt);
+		// Remove the surrounding quotes added by Serialize
+		escapedPrompt = escapedPrompt.Substring(1, escapedPrompt.Length - 2);
+		string requestBody = $"{{\"contents\":[{{\"role\":\"user\",\"parts\":[{{\"text\":\"{escapedPrompt}\"}}]}}]}}";
+				
+		// Send Request
+		GD.Print("Sending Request");
+		_geminiRequest.Request(url, headers, HttpClient.Method.Post, requestBody);
+	}
+
+	
+	private void _on_gemini_request_request_completed(long result, long response_code, string[] headers, byte[] body)
+	{
+		string response = System.Text.Encoding.UTF8.GetString(body);
+		GD.Print("Gemini API response: ", response);
+
+		// Parse the response JSON
+		var json = new Godot.Json();
+		if (json.Parse(response) == Error.Ok)
+		{
+			var dict = json.Data.AsGodotDictionary();
+			if (dict.ContainsKey("candidates"))
+			{
+				var candidates = dict["candidates"].AsGodotArray();
+				if (candidates.Count > 0)
+				{
+					var content = candidates[0].AsGodotDictionary()["content"].AsGodotDictionary();
+					var parts = content["parts"].AsGodotArray();
+					if (parts.Count > 0)
+					{
+						string llmText = parts[0].AsGodotDictionary()["text"].AsString();
+						GD.Print("Gemini LLM returned:\n" + llmText);
+					}
+				}
+			}
+		}
+	}
+
+	private string LoadGeminiApiKey(string path = "res://gemini_api_key.n")
+	{
+		if (!FileAccess.FileExists(path))
+		{
+			GD.PrintErr($"API key file not found: {path}");
+			return "";
+		}
+		using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+		return file.GetLine().StripEdges();
 	}
 
 	private void ResolveBoardIfMissing()
