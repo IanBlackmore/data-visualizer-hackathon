@@ -26,18 +26,8 @@ func run_test():
 	print("Connecting line")
 	
 	create_connection(1,0)
-	await get_tree().create_timer(3.0).timeout
-	create_new_node(-10,10,20)
-	
-	await get_tree().create_timer(3.0).timeout
-	
-	create_connection(1,2)
-	await get_tree().create_timer(3.0).timeout
-	create_connection(0,2)
-	
-	
-	
-	
+
+
 
 
 func create_new_node(xPos: float, yPos: float, zPos: float):
@@ -70,8 +60,12 @@ func create_connection(firstID: int, secondID: int):
 	mesh.look_at_from_position(mesh.position, nodeList[firstID].position)
 	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
 	mesh.rotation_degrees.x += 90
+
+	mesh.nodeID1 = firstID
+	mesh.nodeID2 = secondID
 	add_child(mesh)
-	
+	nodeList[firstID].connections.append(mesh)
+	nodeList[secondID].connections.append(mesh)
 
 
 

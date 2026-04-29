@@ -2,9 +2,13 @@ class_name NodeLine
 extends MeshInstance3D
 
 
+var nodeID1: int
+var nodeID2: int
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	pass # Replace with function body.
+	nodeID1 = 0
+	nodeID2 = 0
 
 func changeHeight(size: float):
 	var cylinder: CylinderMesh = CylinderMesh.new()

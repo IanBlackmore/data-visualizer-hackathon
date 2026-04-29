@@ -1,9 +1,11 @@
 class_name Graphnode
 extends Area3D
 
+
 var ID: int
 var boardMatrix: Array[Array]
 var connections: Array[Graphnode]
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass # Replace with function body.
@@ -18,6 +20,7 @@ func set_board_matrix(matrix: Array[Array]):
 
 func get_board_matrix() -> Array[Array]:
 	return boardMatrix
+
 
 
 func set_node_position(xPos:float, yPos:float, zPos:float):
