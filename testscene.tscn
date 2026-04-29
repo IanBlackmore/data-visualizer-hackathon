@@ -92,6 +92,8 @@ size_flags_vertical = 3
 focus_mode = 0
 text = "Export JSON"
 
+[node name="GeminiRequest" type="HTTPRequest" parent="SubViewportContainer2/SubViewport2/UI Test/BottomBar" unique_id=1445385250]
+
 [node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=281403973]
 anchors_preset = 15
 anchor_right = 1.0
@@ -121,3 +123,4 @@ environment = SubResource("Environment_612pj")
 [connection signal="pressed" from="SubViewportContainer2/SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/Scn1Btn" to="SubViewportContainer2/SubViewport2/UI Test/BottomBar" method="_on_scn_1_btn_pressed"]
 [connection signal="pressed" from="SubViewportContainer2/SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/Scn2Btn" to="SubViewportContainer2/SubViewport2/UI Test/BottomBar" method="_on_scn_2_btn_pressed"]
 [connection signal="pressed" from="SubViewportContainer2/SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/AskBtn" to="SubViewportContainer2/SubViewport2/UI Test/BottomBar" method="_on_ask_btn_pressed"]
+[connection signal="request_completed" from="SubViewportContainer2/SubViewport2/UI Test/BottomBar/GeminiRequest" to="SubViewportContainer2/SubViewport2/UI Test/BottomBar" method="_on_gemini_request_request_completed"]
