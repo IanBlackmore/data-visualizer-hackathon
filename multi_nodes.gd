@@ -8,6 +8,9 @@ var nodeList: Array[Graphnode]
 
 var currentID: int
 
+
+var positionList: Array[Vector3]
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	for child in get_children():
@@ -29,15 +32,26 @@ func run_test():
 	var yInc: int = 10
 	var zInc: int = 10
 	# goated seed for this example actually
-	seed(220)
+	seed(21)
 	for item in result:
-		create_new_node(xInc, yInc, zInc, item)
-		if randi() % 2 == 1:
-			xInc += 10
-		elif randi() % 2 == 1:
-			yInc += 10
-		elif randi() % 2 == 1:
-			zInc += 10
+		var looper: bool = true
+		while looper == true:
+			if randi() % 2 == 1:
+				xInc += 5
+			elif randi() % 2 == 1:
+				yInc += 5
+			elif randi() % 2 == 1:
+				zInc += 5
+			elif randi() % 2 == 1:
+				xInc -= 5
+			elif randi() % 2 == 1:
+				yInc -= 5
+			elif randi() % 2 == 1:
+				zInc -= 5
+				if !positionList.has(Vector3(xInc,yInc,zInc)):
+					positionList.append(Vector3(xInc,yInc,zInc))
+					create_new_node(xInc, yInc, zInc, item)
+					looper = false
 
 
 
@@ -106,10 +120,9 @@ func create_connection(firstID: int, secondID: int):
 	var meshPoint: Vector3 = (nodeList[firstID].position + nodeList[secondID].position)/2
 	var mesh: NodeLine = nodeLine.instantiate()
 	mesh.position = meshPoint
-	if nodeList[firstID].position == nodeList[secondID].position:
-		nodeList[firstID].position *= 2
+	
 	mesh.changeHeight(nodeList[firstID].position.distance_to(nodeList[secondID].position))
-	mesh.look_at_from_position(mesh.position, nodeList[firstID].position)
+	mesh.look_at_from_position(mesh.position, nodeList[firstID].position, Vector3(0, 1, 0.001))
 	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
 	mesh.rotation_degrees.x += 90
 
