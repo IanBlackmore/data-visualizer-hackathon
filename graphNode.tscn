@@ -1,3 +1,18 @@
 [gd_scene format=3 uid="uid://ha8c7r8c1kat"]
 
-[node name="Node3D" type="Node3D" unique_id=419613662]
+[ext_resource type="Script" uid="uid://bndpe2w3ipjc2" path="res://graph_node.gd" id="1_4xcok"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ffhen"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_4xcok"]
+
+[node name="graphNode" type="Area3D" unique_id=1921855394]
+script = ExtResource("1_4xcok")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1686852850]
+shape = SubResource("SphereShape3D_ffhen")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=307368817]
+mesh = SubResource("SphereMesh_4xcok")
+
+[connection signal="input_event" from="." to="." method="_on_input_event"]
