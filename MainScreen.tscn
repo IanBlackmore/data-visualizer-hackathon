@@ -24,3 +24,12 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_cshku")
 BlockTemplate = ExtResource("2_i8u74")
+
+[node name="Button" type="Button" parent="CanvasLayer/Control/Board" unique_id=683583171]
+layout_mode = 0
+offset_left = 842.0
+offset_top = 440.0
+offset_right = 1133.0
+offset_bottom = 632.0
+text = "Solve
+ "
