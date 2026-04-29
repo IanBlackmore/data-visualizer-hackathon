@@ -72,6 +72,33 @@ public partial class Board : Control
 		}
 		return true;
 	}
+	//overloading for bfs usage. this should be able to be run without the use of the animations.
+	public bool CanMove(byte[,] grid, Vector2I currentPos, Vector2I size, Vector2I direction)
+	{
+		Vector2I nextPos = currentPos + direction;
+
+		for (int x = 0; x < size.X; x++)
+		{
+			for (int y = 0; y < size.Y; y++)
+			{
+				int targetX = nextPos.X + x;
+				int targetY = nextPos.Y + y;
+
+				// 1. Check Board Boundaries
+				if (targetX < 0 || targetX >= 4 || targetY < 0 || targetY >= 5) 
+					return false;
+
+				// 2. Check if cell is occupied by ANOTHER block
+				// It's okay if targetX/Y is inside the block's current area
+				bool isInsideOwnSelf = (targetX >= currentPos.X && targetX < currentPos.X + size.X &&
+										targetY >= currentPos.Y && targetY < currentPos.Y + size.Y);
+				
+				if (!isInsideOwnSelf && grid[targetX, targetY] != (byte)'.')
+					return false;
+			}
+		}
+		return true;
+	}
 
 	public void SelectBlock(KlotskiBlock block)
 	{
@@ -94,5 +121,38 @@ public partial class Board : Control
 		{
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
 		}
+	}
+	//put 
+	public byte[,] GetState2D()
+	{
+		byte[,] grid = new byte[4, 5];
+		// empty the grid first. then fill.
+		for (int y = 0; y < 5; y++)
+			for (int x = 0; x < 4; x++)
+				grid[x, y] = (byte)'.';
+
+		foreach (var block in _blocks)
+		{
+			byte symbol = GetSymbolForBlock(block);
+			for (int x = 0; x < block.BlockSize.X; x++)
+			{
+				for (int y = 0; y < block.BlockSize.Y; y++)
+				{
+					grid[block.GridPos.X + x, block.GridPos.Y + y] = symbol;
+				}
+			}
+		}
+		return grid;
+	}
+	
+	public serializeState(byte[,] grid){
+		char[] flattenedState = new char[20];
+		int ind = 0;
+		for(int i = 0; i < 5; i++){
+			for(int i = 0; i < 5; i++){
+			 	flattendState = (char)grid[x,y];
+			}
+		}
+		return new string(flattenedState);
 	}
 }
