@@ -18,15 +18,34 @@ func _ready():
 	currentID = 0
 	run_test()
 
+
+func load_matrix_from_file(path: String) -> Array[Array]:
+	if not FileAccess.file_exists(path):
+		return []
+
+	var file = FileAccess.open(path, FileAccess.READ)
+	var text = file.get_as_text()
+
+	var json = JSON.new()
+	if json.parse(text) != OK:
+		return []
+
+	var grid_list = json.data["grid"]
+
+	var matrix: Array[Array] = []
+	for y in range(grid_list.size()):
+		var row = []
+		for x in range(grid_list[y].size()):
+			row.append(int(grid_list[y][x]))
+		matrix.append(row)
+
+	return matrix
+
 func run_test():
 	# Matrix 1 (starting position)
-	var matrix: Array[Array] = [
-		[0, 2, 1, 1],
-		[0, 2, 0, 0],
-		[0, 0, 0, 0],
-		[0, 0, 0, 0],
-		[0, 0, 0, 0]
-	]
+	
+	var matrix: Array[Array] = load_matrix_from_file("res://Layouts/level1.json");
+	
 	var result = generate_all_states(matrix)
 	var xInc: int = 10
 	var yInc: int = 10
@@ -148,6 +167,7 @@ func _process(_delta):
 
 func board_to_key(board: Array[Array]) -> String:
 	var parts := []
+	
 	for row in board:
 		parts.append(",".join(row.map(func(v): return str(v))))
 	return "|".join(parts)
@@ -249,7 +269,7 @@ func apply_move(board, id, cells, dir):
 	return new_board
 
 
-func generate_all_states(start_board):
+func generate_all_states(start_board: Array[Array]):
 	var visited := {}
 	var queue := []
 	
