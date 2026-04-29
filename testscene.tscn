@@ -20,3 +20,7 @@ handle_input_locally = false
 render_target_update_mode = 4
 
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1416676607]
+transform = Transform3D(0.86082894, -0.027428621, 0.5081548, 0.031846873, 0.99949276, 0, -0.5078971, 0.016183142, 0.8612658, 13.841, 4.36, 21.097)
+fov = 135.0
