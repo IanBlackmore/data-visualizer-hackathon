@@ -27,7 +27,8 @@ public partial class Board : Control
 	{
 		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
 
-		SpawnInitialLayout();
+		// SpawnInitialLayout();
+		LoadMatrixFromFile("res://Layouts/level1.json");
 		QueueRedraw();
 	}
 
@@ -106,6 +107,15 @@ public partial class Board : Control
 
 	public override void _Input(InputEvent @event)
 	{
+		//export hotkey
+		if (@event.IsActionPressed("export_board"))
+		{
+			SaveMatrixToFile("res://Layouts/exported_level.json");
+			GD.Print("Board exported!");
+			return; 
+		}
+		
+		//movement logic
 		if (_selectedBlock == null)
 		{
 			return;
@@ -228,4 +238,179 @@ public partial class Board : Control
 			outlineWidth
 		);
 	}
+	
+	public void LoadMatrixFromFile(string path)
+	{
+		var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+		var text = file.GetAsText();
+		file.Close();
+
+		var json = new Json();
+		var error = json.Parse(text);
+
+		if (error != Error.Ok)
+		{
+			GD.PrintErr("JSON parse error: ", json.GetErrorMessage());
+			return;
+		}
+
+		var dict = json.Data.AsGodotDictionary();
+		var gridList = dict["grid"].AsGodotArray();
+
+		// Convert GodotArray → int[][]
+		int[][] matrix = new int[gridList.Count][];
+		for (int y = 0; y < gridList.Count; y++)
+		{
+			var row = gridList[y].AsGodotArray();
+			matrix[y] = new int[row.Count];
+
+			for (int x = 0; x < row.Count; x++)
+				matrix[y][x] = (int)row[x];
+		}
+
+		LoadMatrixLayout(matrix);
+	}
+	
+	public void LoadMatrixLayout(int[][] matrix)
+	{
+		// Remove existing blocks
+		foreach (var b in _blocks)
+			b.QueueFree();
+		_blocks.Clear();
+
+		// Update grid size
+		_gridSize = new Vector2I(matrix[0].Length, matrix.Length);
+		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
+
+		bool[,] visited = new bool[_gridSize.X, _gridSize.Y];
+
+		for (int y = 0; y < _gridSize.Y; y++)
+		{
+			for (int x = 0; x < _gridSize.X; x++)
+			{
+				int id = matrix[y][x];
+
+				if (id == 0 || visited[x, y])
+					continue;
+
+				var block = ExtractBlockFromMatrix(matrix, id, x, y, visited);
+
+				CreateBlock(
+					block.id,
+					block.pos,
+					block.size,
+					_neutralBlockColor
+				);
+			}
+		}
+
+		QueueRedraw();
+	}
+
+	private (string id, Vector2I pos, Vector2I size)
+		ExtractBlockFromMatrix(int[][] matrix, int id, int startX, int startY, bool[,] visited)
+	{
+		int width = matrix[0].Length;
+		int height = matrix.Length;
+
+		int minX = startX, maxX = startX;
+		int minY = startY, maxY = startY;
+
+		Queue<Vector2I> q = new();
+		q.Enqueue(new Vector2I(startX, startY));
+		visited[startX, startY] = true;
+
+		while (q.Count > 0)
+		{
+			var p = q.Dequeue();
+
+			minX = Math.Min(minX, p.X);
+			maxX = Math.Max(maxX, p.X);
+			minY = Math.Min(minY, p.Y);
+			maxY = Math.Max(maxY, p.Y);
+
+			foreach (var dir in new Vector2I[] {
+				Vector2I.Up, Vector2I.Down, Vector2I.Left, Vector2I.Right })
+			{
+				int nx = p.X + dir.X;
+				int ny = p.Y + dir.Y;
+
+				if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+					continue;
+
+				if (visited[nx, ny])
+					continue;
+
+				if (matrix[ny][nx] == id)
+				{
+					visited[nx, ny] = true;
+					q.Enqueue(new Vector2I(nx, ny));
+				}
+			}
+		}
+
+		return (
+			id.ToString(),
+			new Vector2I(minX, minY),
+			new Vector2I(maxX - minX + 1, maxY - minY + 1)
+		);
+	}
+
+	public int[][] ExportMatrixLayout()
+	{
+		int[][] matrix = new int[_gridSize.Y][];
+
+		for (int y = 0; y < _gridSize.Y; y++)
+			matrix[y] = new int[_gridSize.X];
+
+		foreach (var block in _blocks)
+		{
+			int id = int.Parse(block.ID);
+
+			for (int dy = 0; dy < block.BlockSize.Y; dy++)
+			{
+				for (int dx = 0; dx < block.BlockSize.X; dx++)
+				{
+					int x = block.GridPos.X + dx;
+					int y = block.GridPos.Y + dy;
+
+					matrix[y][x] = id;
+				}
+			}
+		}
+
+		return matrix;
+	}
+
+	public string ExportMatrixJson()
+	{
+		int[][] matrix = ExportMatrixLayout();
+
+		// Convert int[][] → Godot Array-of-Arrays
+		var outer = new Godot.Collections.Array();
+
+		for (int y = 0; y < matrix.Length; y++)
+		{
+			var row = new Godot.Collections.Array();
+			for (int x = 0; x < matrix[y].Length; x++)
+			{
+				row.Add(matrix[y][x]); // int → Variant
+			}
+			outer.Add(row);
+		}
+
+		var wrapper = new Godot.Collections.Dictionary<string, Variant>();
+		wrapper["grid"] = outer;
+
+		return Json.Stringify(wrapper, "\t");
+	}
+	
+	public void SaveMatrixToFile(string path)
+	{
+		string json = ExportMatrixJson();
+		
+		using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+		file.StoreString(json);
+	}
+	
 }
