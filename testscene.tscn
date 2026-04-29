@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://b3tetjpj53ts2"]
+
+[ext_resource type="PackedScene" uid="uid://317hvtofyeyj" path="res://MainScreen.tscn" id="1_44gc5"]
+[ext_resource type="PackedScene" uid="uid://bfuehtbypj6sk" path="res://multi_nodes.tscn" id="2_612pj"]
+
+[node name="Testscene" type="Node" unique_id=1622659957]
+
+[node name="MultiNodes" parent="." unique_id=914955705 instance=ExtResource("2_612pj")]
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=281403973]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.59, 0.59)
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=1237155874]
+
+[node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
