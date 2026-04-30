@@ -20,13 +20,17 @@ public partial class BottomBar : Control
 
 	[Export] public bool   AutoSolveAfterLevelLoad = true;
 	[Export] public string ExportPath = "res://Layouts/exported_level.json";
+	[Export] public string GeminiApiKey = "";
 
 	private Board _board;
+	private HttpRequest _geminiRequest;
 	private HBoxContainer _buttonRow;
 
 	public override void _Ready()
 	{
 		CallDeferred(nameof(Initialize));
+
+		_geminiRequest = GetNode<HttpRequest>("GeminiRequest");
 	}
 
 	private void Initialize()
@@ -71,7 +75,10 @@ public partial class BottomBar : Control
 	private void BuildButtons()
 	{
 		foreach (Node child in GetChildren())
+		{
+			if (child is HttpRequest) continue; // Don't free GeminiRequest
 			child.QueueFree();
+		}
 
 		AnchorLeft   = 0f; AnchorRight  = 1f;
 		AnchorTop    = 0f; AnchorBottom = 1f;
@@ -198,10 +205,129 @@ public partial class BottomBar : Control
 			return;
 		}
 
-		GD.Print("Ask Gemini pressed. Current board JSON:");
-		GD.Print(_board.ExportMatrixJson());
-		_board.SaveMatrixToFile(ExportPath);
-		GD.Print($"Board exported to: {ExportPath}");
+		GD.Print("Ask Gemini pressed...");
+		
+		// Save and load current matrix json
+		_board?.SaveMatrixToFile("res://Layouts/exported_level.json");
+		string boardJson = _board.ExportMatrixJson();
+
+		// Gemini API endpoint and key
+		string apiKey = LoadGeminiApiKey();
+
+		string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key="+apiKey;
+		string[] headers = { "Content-Type: application/json" };
+
+		// Prepare the prompt and request body
+		string prompt =
+			$"You are analyzing a Klotski-style sliding block puzzle represented as a JSON matrix.\n\n" +
+			"CONTEXT:\n" +
+			"- The board is a 2D grid of integers.\n" +
+			"- Each non-zero integer represents a block ID.\n" +
+			"- Block ID \"1\" is the HERO block.\n" +
+			"- The hero block must reach the WINNING POSITION to solve the puzzle.\n\n" +
+			"RULES:\n" +
+			"- Blocks slide along their long face (a 1highx2wide will move LEFT/RIGHT, a 2highx1wide will move UP, DOWN).\n" +
+			"- A \"move\" is defined as sliding a single block by one grid cell.\n" +
+			"- Blocks cannot overlap or leave the board.\n" +
+			"- The goal is to compute the MINIMUM number of moves required to reach the winning state.\n\n" +
+			"WIN CONDITION:\n" +
+			"The puzzle is solved when the HERO block (ID 1) has its RIGHT EDGE aligned with the RIGHT-CENTER of the board.\n" +
+			"Example:\n\n" +
+			"Start:\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[1,1,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n\n" +
+			"Winning:\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,1,1]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n\n" +
+			"TASK:\n" +
+			"Given the following board state, compute:\n" +
+			"1. The MINIMUM number of moves required to reach the winning state.\n" +
+			"2. A step-by-step ordered list of moves.\n\n" +
+			"REQUIRED OUTPUT FORMAT:\n" +
+			"--- MOVE SEQUENCE TO SOLUTION ---\n" +
+			"Step 1: Block 'X' moved DIRECTION to (newX, newY)\n" +
+			"Step 2: Block 'Y' moved DIRECTION to (newX, newY)\n" +
+			"...\n" +
+			"Total Moves: N\n" +
+			"---------------------------------\n\n" +
+			"Here is the board JSON to analyze:\n" +
+			$"{boardJson}";
+
+		string escapedPrompt = System.Text.Json.JsonSerializer.Serialize(prompt);
+		// Remove the surrounding quotes added by Serialize
+		escapedPrompt = escapedPrompt.Substring(1, escapedPrompt.Length - 2);
+		string requestBody = $"{{\"contents\":[{{\"role\":\"user\",\"parts\":[{{\"text\":\"{escapedPrompt}\"}}]}}]}}";
+				
+		// Send Request
+		GD.Print("Sending Request");
+		_geminiRequest.Request(url, headers, HttpClient.Method.Post, requestBody);
+	}
+
+	private void _on_gemini_request_request_completed(long result, long response_code, string[] headers, byte[] body)
+	{
+		string response = System.Text.Encoding.UTF8.GetString(body);
+		GD.Print("Gemini API response recieved: ");
+
+		var json = new Godot.Json();
+		if (json.Parse(response) != Error.Ok)
+		{
+			GD.PrintErr("Failed to parse JSON.");
+			return;
+		}
+
+		var root = json.Data.AsGodotDictionary();
+
+		if (!root.ContainsKey("candidates"))
+		{
+			GD.PrintErr("No candidates in response.");
+			return;
+		}
+
+		var candidates = root["candidates"].AsGodotArray();
+		if (candidates.Count == 0)
+		{
+			GD.PrintErr("Candidates array empty.");
+			return;
+		}
+
+		var content = candidates[0].AsGodotDictionary()["content"].AsGodotDictionary();
+		var parts = content["parts"].AsGodotArray();
+
+		// Collect ONLY "text" fields
+		System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+		foreach (var partObj in parts)
+		{
+			var part = partObj.AsGodotDictionary();
+
+			if (part.ContainsKey("text"))
+			{
+				sb.Append(part["text"].AsString());
+				sb.Append("\n");
+			}
+		}
+
+		string llmText = sb.ToString().Trim();
+		GD.Print("Gemini LLM (cleaned):\n" + llmText);
+
+	}
+
+
+	private string LoadGeminiApiKey(string path = "res://gemini_api_key.n")
+	{
+		if (!FileAccess.FileExists(path))
+		{
+			GD.PrintErr($"API key file not found: {path}");
+			return "";
+		}
+		using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+		return file.GetLine().StripEdges();
 	}
 
 	// Legacy signal handlers

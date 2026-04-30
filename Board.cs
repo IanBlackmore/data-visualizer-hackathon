@@ -697,21 +697,23 @@ public partial class Board : Control
 		return matrix;
 	}
 
-	public string ExportMatrixJson()
-	{
-		var outer = new Godot.Collections.Array();
+	// public string ExportMatrixJson()
+	// {
+	// 	var outer = new Godot.Collections.Array();
 
-		foreach (var row in ExportMatrixLayout())
-		{
-			var r = new Godot.Collections.Array();
-			foreach (int v in row)
-				r.Add(v);
-			outer.Add(r);
-		}
+	// 	foreach (var row in ExportMatrixLayout())
+	// 	{
+	// 		var r = new Godot.Collections.Array();
 
-		var wrapper = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
-		return Json.Stringify(wrapper, "\t");
-	}
+	// 		foreach (int v in row)
+	// 			r.Add(v);
+
+	// 		outer.Add(r);
+	// 	}
+
+	// 	var wrapper = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
+	// 	return Json.Stringify(wrapper, "\t");
+	// }
 
 	public void SaveMatrixToFile(string path)
 	{
@@ -724,4 +726,26 @@ public partial class Board : Control
 
 		file.StoreString(ExportMatrixJson());
 	}
+
+	public string ExportMatrixJson()
+	{
+		int[][] matrix = new int[_gridSize.Y][];
+		for (int y = 0; y < _gridSize.Y; y++) matrix[y] = new int[_gridSize.X];
+		foreach (var b in _blocks)
+		{
+			int id = int.Parse(b.ID);
+			for (int dy = 0; dy < b.BlockSize.Y; dy++)
+				for (int dx = 0; dx < b.BlockSize.X; dx++)
+					matrix[b.GridPos.Y + dy][b.GridPos.X + dx] = id;
+		}
+		var outer = new Godot.Collections.Array();
+		foreach (var rowArr in matrix) {
+			var row = new Godot.Collections.Array();
+			foreach (int val in rowArr) row.Add(val);
+			outer.Add(row);
+		}
+		var dict = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
+		return Json.Stringify(dict, "\t");
+	}
+
 }
