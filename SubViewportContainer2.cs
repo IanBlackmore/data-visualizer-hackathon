@@ -3,11 +3,21 @@ using System;
 
 public partial class SubViewportContainer2 : SubViewportContainer
 {
+	[Export] public bool PinToViewportBottom = true;
+	[Export] public int BottomBarHeight = 96;
+
 	private SubViewport _subViewport;
 
 	public override void _Ready()
 	{
 		ResolveSubViewport();
+		FitToViewportBottom();
+		ResizeSubViewport();
+	}
+
+	public override void _Process(double delta)
+	{
+		FitToViewportBottom();
 		ResizeSubViewport();
 	}
 
@@ -32,6 +42,23 @@ public partial class SubViewportContainer2 : SubViewportContainer
 				return;
 			}
 		}
+	}
+
+	private void FitToViewportBottom()
+	{
+		if (!PinToViewportBottom)
+			return;
+
+		Vector2 viewportSize = GetViewport().GetVisibleRect().Size;
+		float h = Mathf.Max(1f, BottomBarHeight);
+		Vector2 targetPosition = new Vector2(0f, Mathf.Max(0f, viewportSize.Y - h));
+		Vector2 targetSize = new Vector2(Mathf.Max(1f, viewportSize.X), h);
+
+		if (Position != targetPosition)
+			Position = targetPosition;
+
+		if (Size != targetSize)
+			Size = targetSize;
 	}
 
 	private void ResizeSubViewport()

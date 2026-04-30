@@ -85,18 +85,17 @@ public partial class BottomBar : Control
 		OffsetLeft   = 0f; OffsetRight  = 0f;
 		OffsetTop    = 0f; OffsetBottom = 0f;
 
-		// Strip pinned to the bottom — natural sprite height is 84 px (verified
-		// against Art/*.png), surrounded by ButtonMargin top/bottom.
-		const int ButtonHeight = 84;
+		// Use the actual viewport space given to the bottom bar.
+		// Do not assume the screen is wide enough for five natural 300px buttons.
 		var bottomHolder = new Control
 		{
 			AnchorLeft   = 0f,
 			AnchorRight  = 1f,
-			AnchorTop    = 1f,
+			AnchorTop    = 0f,
 			AnchorBottom = 1f,
 			OffsetLeft   =  ButtonMargin,
 			OffsetRight  = -ButtonMargin,
-			OffsetTop    = -(ButtonHeight + ButtonMargin),
+			OffsetTop    =  ButtonMargin,
 			OffsetBottom = -ButtonMargin
 		};
 		AddChild(bottomHolder);
@@ -158,14 +157,17 @@ public partial class BottomBar : Control
 	{
 		return new AnimatedFrameButton
 		{
-			SpriteSheetPath  = spritePath,
-			TotalFrames      = TotalFrames,       // 3 frames, all looped
-			AnimationFps     = ButtonAnimationFps, // 10 fps
-			StretchToFit     = false,              // keep natural 300x72 size
+			SpriteSheetPath       = spritePath,
+			TotalFrames           = TotalFrames,       // 3 frames, all looped
+			AnimationFps          = ButtonAnimationFps, // 10 fps
+			StretchToFit          = true,               // shrink/grow inside the real bar width
+			PreserveAspectRatio   = true,               // no ugly horizontal squish
+			CustomMinimumSize     = Vector2.Zero,       // let HBoxContainer shrink it
 
-			SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
-			SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter,
-			FocusMode           = Control.FocusModeEnum.None
+			SizeFlagsHorizontal   = Control.SizeFlags.ExpandFill,
+			SizeFlagsVertical     = Control.SizeFlags.ExpandFill,
+			SizeFlagsStretchRatio = 1f,
+			FocusMode             = Control.FocusModeEnum.None
 		};
 	}
 
@@ -236,17 +238,19 @@ public partial class BottomBar : Control
 			"The puzzle is solved when the HERO block (ID 1) has its RIGHT EDGE aligned with the RIGHT-CENTER of the board.\n" +
 			"Example:\n\n" +
 			"Start:\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[1,1,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[1,1,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n\n" +
 			"Winning:\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,1,1]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,1,1]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n\n" +
 			"TASK:\n" +
 			"Given the following board state, compute:\n" +
 			"1. The MINIMUM number of moves required to reach the winning state.\n" +
@@ -318,7 +322,65 @@ public partial class BottomBar : Control
 		string llmText = sb.ToString().Trim();
 		GD.Print("Gemini LLM (cleaned):\n" + llmText);
 
+		// Save parsed move sequence to JSON
+		SaveGeminiResponseToJson(llmText);
 	}
+
+	/// <summary>
+	/// Parses the Gemini LLM output for the required move sequence and saves it as JSON.
+	/// </summary>
+	/// <param name="llmText">The full Gemini LLM output text.</param>
+	private void SaveGeminiResponseToJson(string llmText)
+	   {
+		   // Find the required section
+		   string startTag = "--- MOVE SEQUENCE TO SOLUTION ---";
+		   string endTag = "---------------------------------";
+		   int startIdx = llmText.IndexOf(startTag);
+		   int endIdx = llmText.IndexOf(endTag, startIdx + startTag.Length);
+		   if (startIdx == -1 || endIdx == -1)
+		   {
+			   GD.PrintErr("Could not find required move sequence section in Gemini response.");
+			   return;
+		   }
+
+		   // Extract the section
+		   int contentStart = startIdx + startTag.Length;
+		   string section = llmText.Substring(contentStart, endIdx - contentStart).Trim();
+
+		   // Split into lines and parse steps
+		   var lines = section.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		   var steps = new System.Collections.Generic.List<string>();
+		   int totalMoves = -1;
+		   foreach (var line in lines)
+		   {
+			   if (line.StartsWith("Step "))
+			   {
+				   steps.Add(line.Trim());
+			   }
+			   else if (line.StartsWith("Total Moves:"))
+			   {
+				   var parts = line.Split(':');
+				   if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out int moves))
+					   totalMoves = moves;
+			   }
+		   }
+
+		   // Build the JSON object
+		   var responseObj = new System.Collections.Generic.Dictionary<string, object>
+		   {
+			   { "steps", steps },
+			   { "total_moves", totalMoves }
+		   };
+
+		   // Serialize to JSON
+		   string jsonString = System.Text.Json.JsonSerializer.Serialize(responseObj, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+		   // Save to file
+		   string savePath = "res://Layouts/GeminiResponse.json";
+		   using var file = FileAccess.Open(savePath, FileAccess.ModeFlags.Write);
+		   file.StoreString(jsonString);
+		   GD.Print($"Gemini response saved to {savePath}");
+	   }
 
 
 	private string LoadGeminiApiKey(string path = "res://gemini_api_key.n")

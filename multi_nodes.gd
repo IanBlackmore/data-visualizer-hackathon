@@ -17,6 +17,12 @@ var nodeList: Array[Graphnode] = []
 var currentID: int = 0
 var _build_generation: int = 0
 
+# Map Board.cs serialized states to their visible graph node.
+# This lets the board tell the graph which arrangement should be highlighted.
+var hashToNodeID: Dictionary = {}
+var currentBoardNodeID: int = -1
+var pendingCurrentStateHash: String = ""
+
 signal call_good_path
 
 func _ready():
@@ -27,6 +33,8 @@ func _ready():
 		AutoloadSignals.graph_ready.connect(_on_graph_ready)
 	if not AutoloadSignals.winning_path.is_connected(_on_path_ready):
 		AutoloadSignals.winning_path.connect(_on_path_ready)
+	if not AutoloadSignals.board_position_changed.is_connected(_on_board_position_changed):
+		AutoloadSignals.board_position_changed.connect(_on_board_position_changed)
 	if not call_good_path.is_connected(find_good_path):
 		call_good_path.connect(find_good_path)
 
@@ -39,6 +47,9 @@ func clear_graph():
 		child.queue_free()
 	nodeList.clear()
 	trueArray.clear()
+	hashToNodeID.clear()
+	currentBoardNodeID = -1
+	pendingCurrentStateHash = ""
 	currentID = 0
 
 func _on_graph_ready():
@@ -51,7 +62,6 @@ func _on_graph_ready():
 	build_graph(data["adjacency"], data["win_states"], data["start"], generation)
 
 func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String, generation: int):
-	var hash_to_id: Dictionary = {}
 	var queue: Array = [start_hash]
 	var queued: Dictionary = {start_hash: true}
 	var spawn_delay := 0.0
@@ -60,22 +70,25 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String, g
 			return
 
 		var h: String = queue.pop_front()
-		if hash_to_id.has(h):
+		if hashToNodeID.has(h):
 			continue
 
 		var pos := Vector3.ZERO if currentID == 0 else Vector3(randf_range(40, 100), randf_range(40, 100), randf_range(40, 100))
 		create_new_node(pos.x, pos.y, pos.z, hash_to_matrix(h))
 
 		var new_id: int = currentID - 1
-		hash_to_id[h] = new_id
+		hashToNodeID[h] = new_id
 
 		if h in win_states:
 			nodeList[new_id].set_node_finish()
 
+		if pendingCurrentStateHash == h:
+			set_current_board_highlight_by_id(new_id)
+
 		if adjacency.has(h):
 			for neighbor in adjacency[h]:
-				if hash_to_id.has(neighbor):
-					var other_id: int = hash_to_id[neighbor]
+				if hashToNodeID.has(neighbor):
+					var other_id: int = hashToNodeID[neighbor]
 					create_connection(new_id, other_id)
 
 				if not queued.has(neighbor) and currentID < max_nodes:
@@ -87,7 +100,7 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String, g
 	if generation != _build_generation:
 		return
 
-	print("Graph built visually: ", nodeList.size(), " nodes")	
+	print("Graph built visually: ", nodeList.size(), " nodes")
 	call_good_path.emit()
 
 # Decodes a Board.cs state hash back to Array[Array] int matrix.
@@ -231,3 +244,31 @@ func find_good_path():
 		if not found_next:
 			print("Shortest path leaves the visible graph at step ", counter, ". Increase max_nodes if needed.")
 			return
+
+func _on_board_position_changed(state_hash: String):
+	pendingCurrentStateHash = state_hash
+
+	if hashToNodeID.has(state_hash):
+		set_current_board_highlight_by_id(int(hashToNodeID[state_hash]))
+	else:
+		clear_current_board_highlight()
+		print("Current board state is not visible in the graph yet. If this keeps happening, increase max_nodes.")
+
+func set_current_board_highlight_by_id(node_id: int):
+	if currentBoardNodeID == node_id and node_id >= 0 and node_id < nodeList.size():
+		nodeList[node_id].set_node_current_board(true)
+		return
+
+	clear_current_board_highlight()
+
+	if node_id < 0 or node_id >= nodeList.size():
+		return
+
+	currentBoardNodeID = node_id
+	nodeList[currentBoardNodeID].set_node_current_board(true)
+
+func clear_current_board_highlight():
+	if currentBoardNodeID >= 0 and currentBoardNodeID < nodeList.size():
+		nodeList[currentBoardNodeID].set_node_current_board(false)
+
+	currentBoardNodeID = -1
