@@ -174,6 +174,13 @@ func _on_path_ready(path: Array[String]):
 func find_good_path(trueArray: Array[Array]):
 	var i: int = 0
 	var counter: int = 0
+	for item in nodeList:
+		if item.boardMatrix.hash() == trueArray[counter].hash():
+			item.set_node_start()
+			counter +=1
+			i = item.ID
+			break
+	
 	while nodeList[i].isWinningPosition == false:
 		for connection in nodeList[i].connections:
 			if nodeList[connection.nodeID1].boardMatrix == trueArray[counter]:

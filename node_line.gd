@@ -22,13 +22,11 @@ func _process(_delta):
 
 func set_connection_shortpath():
 	material_override = load("res://greenLineMat.tres")
-	
+	mesh.top_radius *=3
+	mesh.bottom_radius *=3
 
 func set_connection_geminipath():
-	var cylinder: CylinderMesh = CylinderMesh.new()
-	cylinder.height = storedSize
-	cylinder.material = load("res://redLineMat.tres")
-	mesh = cylinder
+	material_override = load("res://redLineMat.tres")
 
 func create_line(first: Vector3, second: Vector3, id1:int,id2:int):
 	position = (first + second)/2
