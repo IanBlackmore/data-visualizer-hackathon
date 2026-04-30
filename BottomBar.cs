@@ -322,7 +322,65 @@ public partial class BottomBar : Control
 		string llmText = sb.ToString().Trim();
 		GD.Print("Gemini LLM (cleaned):\n" + llmText);
 
+		// Save parsed move sequence to JSON
+		SaveGeminiResponseToJson(llmText);
 	}
+
+	/// <summary>
+	/// Parses the Gemini LLM output for the required move sequence and saves it as JSON.
+	/// </summary>
+	/// <param name="llmText">The full Gemini LLM output text.</param>
+	private void SaveGeminiResponseToJson(string llmText)
+	   {
+		   // Find the required section
+		   string startTag = "--- MOVE SEQUENCE TO SOLUTION ---";
+		   string endTag = "---------------------------------";
+		   int startIdx = llmText.IndexOf(startTag);
+		   int endIdx = llmText.IndexOf(endTag, startIdx + startTag.Length);
+		   if (startIdx == -1 || endIdx == -1)
+		   {
+			   GD.PrintErr("Could not find required move sequence section in Gemini response.");
+			   return;
+		   }
+
+		   // Extract the section
+		   int contentStart = startIdx + startTag.Length;
+		   string section = llmText.Substring(contentStart, endIdx - contentStart).Trim();
+
+		   // Split into lines and parse steps
+		   var lines = section.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		   var steps = new System.Collections.Generic.List<string>();
+		   int totalMoves = -1;
+		   foreach (var line in lines)
+		   {
+			   if (line.StartsWith("Step "))
+			   {
+				   steps.Add(line.Trim());
+			   }
+			   else if (line.StartsWith("Total Moves:"))
+			   {
+				   var parts = line.Split(':');
+				   if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out int moves))
+					   totalMoves = moves;
+			   }
+		   }
+
+		   // Build the JSON object
+		   var responseObj = new System.Collections.Generic.Dictionary<string, object>
+		   {
+			   { "steps", steps },
+			   { "total_moves", totalMoves }
+		   };
+
+		   // Serialize to JSON
+		   string jsonString = System.Text.Json.JsonSerializer.Serialize(responseObj, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+		   // Save to file
+		   string savePath = "res://Layouts/GeminiResponse.json";
+		   using var file = FileAccess.Open(savePath, FileAccess.ModeFlags.Write);
+		   file.StoreString(jsonString);
+		   GD.Print($"Gemini response saved to {savePath}");
+	   }
 
 
 	private string LoadGeminiApiKey(string path = "res://gemini_api_key.n")
