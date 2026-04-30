@@ -3,11 +3,11 @@ extends Node3D
 
 @export var max_nodes: int = 500
 
-var repulsion_strength: float = 2500.0
-var stiffness: float = 30.0
+var repulsion_strength: float = 11000.0
+var stiffness: float = 10.0
 var rest_length: float = 20.0
 var damping: float = 0.98
-var lerp_speed: float = 0.3
+var lerp_speed: float = 0.1
 
 const graphNode: PackedScene = preload("res://graphNode.tscn")
 const nodeLine: PackedScene = preload("res://nodeLine.tscn")
@@ -37,40 +37,87 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
 	var hash_to_id: Dictionary = {}
 	var queue: Array = [start_hash]
 	var queued: Dictionary = {start_hash: true}
+	
+	var spawn_delay := 0.01 # Adjust this for the visual "growth" speed
 
 	while queue.size() > 0 and currentID < max_nodes:
 		var h: String = queue.pop_front()
 		if hash_to_id.has(h):
 			continue
 
+		# 1. Determine Position
 		var pos := Vector3.ZERO if currentID == 0 \
 			else Vector3(randf_range(-30, 30), randf_range(-30, 30), randf_range(-30, 30))
+		
+		# 2. Create the Node Visual
 		create_new_node(pos.x, pos.y, pos.z, hash_to_matrix(h))
-		hash_to_id[h] = currentID - 1  # currentID was incremented inside create_new_node
+		
+		# currentID is incremented inside create_new_node, so the ID of the node we just made is:
+		var new_id: int = currentID - 1
+		hash_to_id[h] = new_id
 
+		# 3. Apply color if it's a winning state
+		if h in win_states:
+			nodeList[new_id].set_node_finish()
+
+		# 4. Draw connections to nodes that ALREADY exist in the scene
 		if adjacency.has(h):
 			for neighbor in adjacency[h]:
+				if hash_to_id.has(neighbor):
+					var other_id: int = hash_to_id[neighbor]
+					# This draws the line between the new node and its existing neighbor
+					create_connection(new_id, other_id)
+				
+				# If neighbor hasn't been queued yet, add it for future creation
 				if not queued.has(neighbor) and currentID < max_nodes:
 					queue.append(neighbor)
 					queued[neighbor] = true
+		
+		# 5. The Magic "Bitch": Pause the loop to let the engine render the node/line
+		await get_tree().create_timer(spawn_delay).timeout
 
-	# Pass 2: create edges (only between nodes that were actually created)
-	for h in hash_to_id:
-		if not adjacency.has(h):
-			continue
-		var id1: int = hash_to_id[h]
-		for neighbor in adjacency[h]:
-			if hash_to_id.has(neighbor):
-				var id2: int = hash_to_id[neighbor]
-				if id1 < id2:  # each pair once
-					create_connection(id1, id2)
+	print("Graph built visually: ", nodeList.size(), " nodes")
 
-	# Mark win nodes green
-	for win_hash in win_states:
-		if hash_to_id.has(win_hash):
-			nodeList[hash_to_id[win_hash]].set_node_finish()
-
-	print("Graph built: ", nodeList.size(), " nodes")
+#func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
+	## Pass 1: BFS-order node creation, capped at max_nodes
+	#var hash_to_id: Dictionary = {}
+	#var queue: Array = [start_hash]
+	#var queued: Dictionary = {start_hash: true}
+#
+	#while queue.size() > 0 and currentID < max_nodes:
+		#var h: String = queue.pop_front()
+		#if hash_to_id.has(h):
+			#continue
+#
+		#var pos := Vector3.ZERO if currentID == 0 \
+			#else Vector3(randf_range(-30, 30), randf_range(-30, 30), randf_range(-30, 30))
+		#create_new_node(pos.x, pos.y, pos.z, hash_to_matrix(h))
+		#hash_to_id[h] = currentID - 1  # currentID was incremented inside create_new_node
+#
+		#if adjacency.has(h):
+			#for neighbor in adjacency[h]:
+				#if not queued.has(neighbor) and currentID < max_nodes:
+					#queue.append(neighbor)
+					#queued[neighbor] = true
+#
+	## Pass 2: create edges (only between nodes that were actually created)
+	#for h in hash_to_id:
+		#if not adjacency.has(h):
+			#continue
+		#var id1: int = hash_to_id[h]
+		#for neighbor in adjacency[h]:
+			#if hash_to_id.has(neighbor):
+				#var id2: int = hash_to_id[neighbor]
+				#if id1 < id2:  # each pair once
+					##await get_tree().create_timer(0.03).timeout
+					#create_connection(id1, id2)
+#
+	## Mark win nodes green
+	#for win_hash in win_states:
+		#if hash_to_id.has(win_hash):
+			#nodeList[hash_to_id[win_hash]].set_node_finish()
+#
+	#print("Graph built: ", nodeList.size(), " nodes")
 
 # Decodes a Board.cs state hash (20-char, column-major) back to Array[Array] int matrix
 func hash_to_matrix(state_hash: String) -> Array[Array]:
@@ -115,8 +162,8 @@ func _process(delta: float):
 			var diff := node.position - other.position
 			var dist := diff.length()
 			if dist < 0.2:
-				total_force += Vector3(randf(), randf(), randf()) * 500.0
-			elif dist < 140.0:
+				total_force += Vector3(randf(), randf(), randf()) * 10.0
+			elif dist < 1000.0:
 				total_force += diff.normalized() * (repulsion_strength / (dist * dist))
 
 		# Attraction: pull toward connected nodes
@@ -176,6 +223,7 @@ func _on_path_ready(path: Array[String]):
 func find_good_path(trueArray: Array[Array]):
 	var i: int = 0
 	var counter: int = 0
+	await AutoloadSignals.graph_ready
 	while nodeList[i].isWinningPosition == false:
 		for connection in nodeList[i].connections:
 			if nodeList[connection.nodeID1].boardMatrix == trueArray[counter]:
