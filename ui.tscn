@@ -1,0 +1,89 @@
+[gd_scene format=3 uid="uid://bb1cway0gyj28"]
+
+[ext_resource type="Script" path="res://SubViewportContainer2.cs" id="1_m6e0p"]
+[ext_resource type="Script" uid="uid://c1yagmrsg6krr" path="res://BottomBar.cs" id="2_27fn8"]
+
+[node name="SubViewportContainer2" type="SubViewportContainer" unique_id=1848246363]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -95.99994
+offset_right = 786.98315
+offset_bottom = 66.71185
+grow_horizontal = 2
+grow_vertical = 0
+scale = Vector2(0.59, 0.59)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 0
+stretch = true
+script = ExtResource("1_m6e0p")
+
+[node name="SubViewport2" type="SubViewport" parent="." unique_id=1417472368]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(1938, 162)
+size_2d_override_stretch = true
+render_target_update_mode = 4
+
+[node name="UI Test" type="CanvasLayer" parent="SubViewport2" unique_id=813026831]
+follow_viewport_enabled = true
+
+[node name="BottomBar" type="Control" parent="SubViewport2/UI Test" unique_id=1811757877]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("2_27fn8")
+
+[node name="MarginContainer" type="MarginContainer" parent="SubViewport2/UI Test/BottomBar" unique_id=1836443843]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="GridContainer" type="GridContainer" parent="SubViewport2/UI Test/BottomBar/MarginContainer" unique_id=1092929321]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/h_separation = 40
+columns = 3
+
+[node name="Scn1Btn" type="Button" parent="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer" unique_id=413956315]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_mode = 0
+action_mode = 0
+text = "Scene 1"
+
+[node name="Scn2Btn" type="Button" parent="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer" unique_id=563069846]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_mode = 0
+text = "Scene 2"
+
+[node name="AskBtn" type="Button" parent="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer" unique_id=600740933]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_mode = 0
+text = "Export JSON"
+
+[node name="GeminiRequest" type="HTTPRequest" parent="SubViewport2/UI Test/BottomBar" unique_id=1578437465]
+
+[connection signal="pressed" from="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/Scn1Btn" to="SubViewport2/UI Test/BottomBar" method="_on_scn_1_btn_pressed"]
+[connection signal="pressed" from="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/Scn2Btn" to="SubViewport2/UI Test/BottomBar" method="_on_scn_2_btn_pressed"]
+[connection signal="pressed" from="SubViewport2/UI Test/BottomBar/MarginContainer/GridContainer/AskBtn" to="SubViewport2/UI Test/BottomBar" method="_on_ask_btn_pressed"]
+[connection signal="request_completed" from="SubViewport2/UI Test/BottomBar/GeminiRequest" to="SubViewport2/UI Test/BottomBar" method="_on_gemini_request_request_completed"]
