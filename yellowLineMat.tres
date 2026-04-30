@@ -6,7 +6,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2i105"]
 render_priority = 0
 shader = ExtResource("1_sn2vw")
-shader_parameter/outline_width = 0.01
+shader_parameter/outline_width = 0.5
 shader_parameter/outline_color = Color(0, 0, 0, 1)
 
 [resource]

@@ -4,10 +4,10 @@ extends Node3D
 @export var max_nodes: int = 500
 
 var trueArray: Array[Array] = []
-var repulsion_strength: float = 11000.0
+var repulsion_strength: float = 19000.0
 var stiffness: float = 10.0
-var rest_length: float = 20.0
-var damping: float = 0.98
+var rest_length: float = 15.0
+var damping: float = 0.985
 var lerp_speed: float = 0.1
 
 const graphNode: PackedScene = preload("res://graphNode.tscn")
@@ -54,8 +54,7 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String, g
 	var hash_to_id: Dictionary = {}
 	var queue: Array = [start_hash]
 	var queued: Dictionary = {start_hash: true}
-	var spawn_delay := 0.01
-
+	var spawn_delay := 0.0
 	while queue.size() > 0 and currentID < max_nodes:
 		if generation != _build_generation:
 			return
@@ -64,7 +63,7 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String, g
 		if hash_to_id.has(h):
 			continue
 
-		var pos := Vector3.ZERO if currentID == 0 else Vector3(randf_range(-30, 30), randf_range(-30, 30), randf_range(-30, 30))
+		var pos := Vector3.ZERO if currentID == 0 else Vector3(randf_range(40, 100), randf_range(40, 100), randf_range(40, 100))
 		create_new_node(pos.x, pos.y, pos.z, hash_to_matrix(h))
 
 		var new_id: int = currentID - 1
@@ -145,8 +144,8 @@ func _process(delta: float):
 			var diff := node.position - other.position
 			var dist := diff.length()
 			if dist < 0.2:
-				total_force += Vector3(randf(), randf(), randf()) * 10.0
-			elif dist < 1000.0:
+				total_force += Vector3(randf(), randf(), randf()) * 100.0
+			elif dist < 15000.0:
 				total_force += diff.normalized() * (repulsion_strength / (dist * dist))
 
 		for line in node.connections:
