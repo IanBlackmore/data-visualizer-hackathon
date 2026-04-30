@@ -3,8 +3,8 @@ extends Node3D
 
 @export var max_nodes: int = 500
 
-var repulsion_strength: float = 6000.0
-var stiffness: float = 60.0
+var repulsion_strength: float = 2500.0
+var stiffness: float = 30.0
 var rest_length: float = 20.0
 var damping: float = 0.98
 var lerp_speed: float = 0.3
@@ -74,11 +74,12 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
 
 # Decodes a Board.cs state hash (20-char, column-major) back to Array[Array] int matrix
 func hash_to_matrix(state_hash: String) -> Array[Array]:
+	var side := 6
 	var matrix: Array[Array] = []
-	for y in range(5):
+	for y in range(side):
 		var row: Array = []
-		for x in range(4):
-			var ch: String = state_hash[y * 4 + x]
+		for x in range(side):
+			var ch: String = state_hash[y * side + x]
 			row.append(0 if ch == "." else ch.to_int())
 		matrix.append(row)
 	return matrix
@@ -157,15 +158,16 @@ func _on_path_ready(path: Array[String]):
 	var trueArray: Array[Array] = []
 	print("path is")
 	print(path)
+	var side := 6
 	for stri in path:
 		var intermediate : Array[Array] = []
-		for j in range(5):
+		for j in range(side):
 			var intArr : Array[int] = []
-			for i in range(4):
-				if stri[i+(j*4)] == '.':
+			for i in range(side):
+				if stri[i+(j*side)] == '.':
 					intArr.append(0)
 				else:
-					intArr.append(int(stri[j*4+i]))
+					intArr.append(int(stri[j*side+i]))
 			intermediate.append(intArr)
 		print(intermediate)
 		trueArray.append(intermediate)
