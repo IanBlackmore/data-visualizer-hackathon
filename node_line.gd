@@ -22,8 +22,8 @@ func _process(_delta):
 
 func set_connection_shortpath():
 	material_override = load("res://greenLineMat.tres")
-	mesh.top_radius *=3
-	mesh.bottom_radius *=3
+	mesh.top_radius *= 3
+	mesh.bottom_radius *= 3
 
 func set_connection_geminipath():
 	material_override = load("res://redLineMat.tres")

@@ -7,7 +7,9 @@ public partial class Board : Control
 	[Export] public PackedScene BlockTemplate;
 	[Export] public int CellSize = 100;
 
-	private Vector2I _gridSize = new Vector2I(4, 5);
+	private const int sideLength = 6;
+
+	private Vector2I _gridSize = new Vector2I(sideLength, sideLength);
 	private List<KlotskiBlock> _blocks = new();
 	private KlotskiBlock _selectedBlock = null;
 
@@ -194,11 +196,11 @@ public partial class Board : Control
 
 	private byte[,] DeserializeState(string state)
 	{
-		byte[,] grid = new byte[4, 5];
+		byte[,] grid = new byte[sideLength, sideLength];
 		int i = 0;
-		for (int y = 0; y < 5; y++)
+		for (int y = 0; y < sideLength; y++)
 		{
-			for (int x = 0; x < 4; x++)
+			for (int x = 0; x < sideLength; x++)
 			{
 				grid[x, y] = (byte)state[i++];
 			}
@@ -208,9 +210,9 @@ public partial class Board : Control
 
 	public byte[,] GetState2D()
 	{
-		byte[,] grid = new byte[4, 5];
-		for (int y = 0; y < 5; y++)
-			for (int x = 0; x < 4; x++)
+		byte[,] grid = new byte[sideLength, sideLength];
+		for (int y = 0; y < sideLength; y++)
+			for (int x = 0; x < sideLength; x++)
 				grid[x, y] = (byte)'.';
 
 		foreach (var block in _blocks)
@@ -225,10 +227,10 @@ public partial class Board : Control
 
 	public string serializeState(byte[,] grid)
 	{
-		char[] flattenedState = new char[20];
+		char[] flattenedState = new char[sideLength * sideLength];
 		int ind = 0;
-		for (int y = 0; y < 5; y++)
-			for (int x = 0; x < 4; x++)
+		for (int y = 0; y < sideLength; y++)
+			for (int x = 0; x < sideLength; x++)
 				flattenedState[ind++] = (char)grid[x, y];
 		return new string(flattenedState);
 	}
@@ -236,7 +238,7 @@ public partial class Board : Control
 	private bool IsWinState(byte[,] grid)
 	{
 		byte heroId = (byte)'1'; 
-		if(grid[3,2] == heroId) {
+		if(grid[5,2] == heroId) {
 			return true;
 		}
 		return false;
@@ -268,7 +270,7 @@ public partial class Board : Control
 			for (int y = 0; y < size.Y; y++)
 			{
 				int tx = nextPos.X + x; int ty = nextPos.Y + y;
-				if (tx < 0 || tx >= 4 || ty < 0 || ty >= 5) return false;
+				if (tx < 0 || tx >= sideLength || ty < 0 || ty >= sideLength) return false;
 				bool self = (tx >= currentPos.X && tx < currentPos.X + size.X && ty >= currentPos.Y && ty < currentPos.Y + size.Y);
 				if (!self && grid[tx, ty] != (byte)'.') return false;
 			}
@@ -297,8 +299,8 @@ public partial class Board : Control
 	{
 		List<BlockData> blocks = new();
 		HashSet<byte> processedIds = new();
-		for (int y = 0; y < 5; y++) 
-			for (int x = 0; x < 4; x++) 
+		for (int y = 0; y < sideLength; y++) 
+			for (int x = 0; x < sideLength; x++) 
 			{
 				byte id = grid[x, y];
 				if (id != (byte)'.' && !processedIds.Contains(id)) 
@@ -314,14 +316,14 @@ public partial class Board : Control
 	private Vector2I MeasureBlock(byte[,] grid, int startX, int startY, byte id)
 	{
 		int w = 0; int h = 0;
-		for (int x = startX; x < 4 && grid[x, startY] == id; x++) w++;
-		for (int y = startY; y < 5 && grid[startX, y] == id; y++) h++;
+		for (int x = startX; x < sideLength && grid[x, startY] == id; x++) w++;
+		for (int y = startY; y < sideLength && grid[startX, y] == id; y++) h++;
 		return new Vector2I(w, h);
 	}
 
 	public override void _Input(InputEvent @event)
 	{
-		if (@event.IsActionPressed("export_board")) { SaveMatrixToFile("res://Layouts/exported_level.json"); return; }
+		if (@event.IsActionPressed("export_board")) { SaveMatrixToFile("res://Layouts/level1.json"); return; }
 		if (_selectedBlock == null) return;
 		Vector2I dir = Vector2I.Zero;
 		if (@event.IsActionPressed("ui_up")) dir = Vector2I.Up;
@@ -366,11 +368,22 @@ public partial class Board : Control
 
 	private void DrawBoardOutline(float boardW, float boardH)
 	{
-		float thick = 4f; float exitY = _exitRow * CellSize; float exitH = _exitHeightCells * CellSize;
+		// boardW and boardH should now be (6 * CellSize)
+		float thick = 4f; 
+		float exitY = _exitRow * CellSize; 
+		float exitH = _exitHeightCells * CellSize;
+
+		// Top Border
 		DrawLine(Vector2.Zero, new Vector2(boardW, 0), _borderColor, thick);
+		// Bottom Border
 		DrawLine(new Vector2(0, boardH), new Vector2(boardW, boardH), _borderColor, thick);
+		// Left Border
 		DrawLine(Vector2.Zero, new Vector2(0, boardH), _borderColor, thick);
+		
+		// Right Border (with Exit Gap)
+		// Draw from top to the start of the exit
 		DrawLine(new Vector2(boardW, 0), new Vector2(boardW, exitY), _borderColor, thick);
+		// Draw from the end of the exit to the bottom
 		DrawLine(new Vector2(boardW, exitY + exitH), new Vector2(boardW, boardH), _borderColor, thick);
 	}
 
