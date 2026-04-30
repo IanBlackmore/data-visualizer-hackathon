@@ -265,12 +265,29 @@ public partial class Board : Control
 			if (physicalBlock.GridPos != bData.Pos)
 				physicalBlock.SlideTo(bData.Pos);
 		}
+
+		// Keep the 3D graph synced during automatic solution playback.
+		EmitBoardPositionChanged(state);
 	}
 
 	private void StopPlayback()
 	{
 		_playbackGeneration++;
 		_playingSolution = false;
+	}
+
+	private void EmitBoardPositionChanged(string stateHash)
+	{
+		if (string.IsNullOrEmpty(stateHash))
+			return;
+
+		Node autoload = GetNodeOrNull<Node>("/root/AutoloadSignals");
+		autoload?.EmitSignal("board_position_changed", stateHash);
+	}
+
+	private void EmitCurrentBoardPositionChanged()
+	{
+		EmitBoardPositionChanged(SerializeState(GetState2D()));
 	}
 
 	// -------------------------------------------------------------------------
@@ -543,6 +560,7 @@ public partial class Board : Control
 			CanMoveBFS(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
 		{
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
+			EmitCurrentBoardPositionChanged();
 			CheckWin(_selectedBlock);
 		}
 	}

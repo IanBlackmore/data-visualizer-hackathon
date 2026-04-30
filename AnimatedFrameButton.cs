@@ -9,7 +9,8 @@ public partial class AnimatedFrameButton : Control
 	[Export] public string SpriteSheetPath = "";
 	[Export] public int    TotalFrames     = 3;    // All frames in the sheet, played as one loop
 	[Export] public float  AnimationFps    = 10f;  // Always-on animation speed
-	[Export] public bool   StretchToFit    = false;
+	[Export] public bool   StretchToFit       = false;
+	[Export] public bool   PreserveAspectRatio = true;
 
 	private AnimatedSprite2D _sprite;
 	private Vector2 _frameSize = Vector2.Zero;
@@ -67,9 +68,20 @@ public partial class AnimatedFrameButton : Control
 
 		_frameSize = new Vector2(frameWidth, frameHeight);
 
-		// Lock control to the natural pixel size of one frame (e.g. 300x72)
-		CustomMinimumSize = _frameSize;
-		Size              = _frameSize;
+		// Natural-size mode is used when the button is placed by hand.
+		// Fit mode is used by BottomBar so five buttons can shrink to the actual screen width.
+		if (StretchToFit)
+		{
+			CustomMinimumSize = Vector2.Zero;
+
+			if (Size.X <= 0 || Size.Y <= 0)
+				Size = _frameSize;
+		}
+		else
+		{
+			CustomMinimumSize = _frameSize;
+			Size              = _frameSize;
+		}
 
 		var frames = new SpriteFrames();
 
@@ -122,10 +134,18 @@ public partial class AnimatedFrameButton : Control
 		if (Size.X <= 0 || Size.Y <= 0)
 			return;
 
-		_sprite.Scale = new Vector2(
-			Size.X / _frameSize.X,
-			Size.Y / _frameSize.Y
-		);
+		float scaleX = Size.X / _frameSize.X;
+		float scaleY = Size.Y / _frameSize.Y;
+
+		if (PreserveAspectRatio)
+		{
+			float scale = Mathf.Min(scaleX, scaleY);
+			_sprite.Scale = new Vector2(scale, scale);
+		}
+		else
+		{
+			_sprite.Scale = new Vector2(scaleX, scaleY);
+		}
 	}
 
 	// -------------------------------------------------------------------------

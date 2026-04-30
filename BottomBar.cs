@@ -85,18 +85,17 @@ public partial class BottomBar : Control
 		OffsetLeft   = 0f; OffsetRight  = 0f;
 		OffsetTop    = 0f; OffsetBottom = 0f;
 
-		// Strip pinned to the bottom — natural sprite height is 84 px (verified
-		// against Art/*.png), surrounded by ButtonMargin top/bottom.
-		const int ButtonHeight = 84;
+		// Use the actual viewport space given to the bottom bar.
+		// Do not assume the screen is wide enough for five natural 300px buttons.
 		var bottomHolder = new Control
 		{
 			AnchorLeft   = 0f,
 			AnchorRight  = 1f,
-			AnchorTop    = 1f,
+			AnchorTop    = 0f,
 			AnchorBottom = 1f,
 			OffsetLeft   =  ButtonMargin,
 			OffsetRight  = -ButtonMargin,
-			OffsetTop    = -(ButtonHeight + ButtonMargin),
+			OffsetTop    =  ButtonMargin,
 			OffsetBottom = -ButtonMargin
 		};
 		AddChild(bottomHolder);
@@ -158,14 +157,17 @@ public partial class BottomBar : Control
 	{
 		return new AnimatedFrameButton
 		{
-			SpriteSheetPath  = spritePath,
-			TotalFrames      = TotalFrames,       // 3 frames, all looped
-			AnimationFps     = ButtonAnimationFps, // 10 fps
-			StretchToFit     = false,              // keep natural 300x72 size
+			SpriteSheetPath       = spritePath,
+			TotalFrames           = TotalFrames,       // 3 frames, all looped
+			AnimationFps          = ButtonAnimationFps, // 10 fps
+			StretchToFit          = true,               // shrink/grow inside the real bar width
+			PreserveAspectRatio   = true,               // no ugly horizontal squish
+			CustomMinimumSize     = Vector2.Zero,       // let HBoxContainer shrink it
 
-			SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
-			SizeFlagsVertical   = Control.SizeFlags.ShrinkCenter,
-			FocusMode           = Control.FocusModeEnum.None
+			SizeFlagsHorizontal   = Control.SizeFlags.ExpandFill,
+			SizeFlagsVertical     = Control.SizeFlags.ExpandFill,
+			SizeFlagsStretchRatio = 1f,
+			FocusMode             = Control.FocusModeEnum.None
 		};
 	}
 
@@ -236,17 +238,19 @@ public partial class BottomBar : Control
 			"The puzzle is solved when the HERO block (ID 1) has its RIGHT EDGE aligned with the RIGHT-CENTER of the board.\n" +
 			"Example:\n\n" +
 			"Start:\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[1,1,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[1,1,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n\n" +
 			"Winning:\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,1,1]\n" +
-			"[0,0,0,0]\n" +
-			"[0,0,0,0]\n\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,1,1]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n" +
+			"[0,0,0,0,0,0]\n\n" +
 			"TASK:\n" +
 			"Given the following board state, compute:\n" +
 			"1. The MINIMUM number of moves required to reach the winning state.\n" +
