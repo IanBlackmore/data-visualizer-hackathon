@@ -85,7 +85,9 @@ public partial class BottomBar : Control
 		OffsetLeft   = 0f; OffsetRight  = 0f;
 		OffsetTop    = 0f; OffsetBottom = 0f;
 
-		// Strip pinned to the bottom — height = 72 (natural sprite height) + margins
+		// Strip pinned to the bottom — natural sprite height is 84 px (verified
+		// against Art/*.png), surrounded by ButtonMargin top/bottom.
+		const int ButtonHeight = 84;
 		var bottomHolder = new Control
 		{
 			AnchorLeft   = 0f,
@@ -94,7 +96,7 @@ public partial class BottomBar : Control
 			AnchorBottom = 1f,
 			OffsetLeft   =  ButtonMargin,
 			OffsetRight  = -ButtonMargin,
-			OffsetTop    = -(72 + ButtonMargin),
+			OffsetTop    = -(ButtonHeight + ButtonMargin),
 			OffsetBottom = -ButtonMargin
 		};
 		AddChild(bottomHolder);

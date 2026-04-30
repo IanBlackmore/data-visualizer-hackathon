@@ -20,7 +20,7 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -96.0
+offset_top = -108.0
 offset_right = 0.0
 offset_bottom = 0.0
 grow_horizontal = 2
@@ -34,7 +34,7 @@ script = ExtResource("2_mawog")
 [node name="SubViewport2" type="SubViewport" parent="SubViewportContainer2" unique_id=1731576058]
 transparent_bg = true
 handle_input_locally = false
-size = Vector2i(1920, 96)
+size = Vector2i(1920, 108)
 size_2d_override_stretch = true
 render_target_update_mode = 4
 

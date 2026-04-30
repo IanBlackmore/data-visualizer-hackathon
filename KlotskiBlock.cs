@@ -7,6 +7,7 @@ public partial class KlotskiBlock : Panel
 	public Vector2I GridPos { get; private set; }
 	public Vector2I BlockSize { get; private set; }
 	public Board Board { get; set; }
+	public bool IsSliding { get; private set; } = false;
 
 	private int _cellSize;
 	private Color _baseColor;
@@ -45,6 +46,7 @@ public partial class KlotskiBlock : Panel
 		_baseColor   = color;
 		_boardOffset = boardOffset;
 		_isHero      = id == "1";
+		IsSliding    = false;
 
 		Position = GridToPixel(GridPos);
 
@@ -190,16 +192,23 @@ public partial class KlotskiBlock : Panel
 	public void SlideTo(Vector2I newGridPos)
 	{
 		GridPos = newGridPos;
-
 		Vector2 targetPosition = GridToPixel(GridPos);
 
 		if (_activeTween != null)
 			_activeTween.Kill();
 
+		IsSliding = true;
 		_activeTween = CreateTween();
 		_activeTween.SetTrans(Tween.TransitionType.Quad);
 		_activeTween.SetEase(Tween.EaseType.Out);
 		_activeTween.TweenProperty(this, "position", targetPosition, 0.12);
+		_activeTween.TweenCallback(Callable.From(OnSlideFinished));
+	}
+
+	private void OnSlideFinished()
+	{
+		IsSliding = false;
+		_activeTween = null;
 	}
 
 	public override void _GuiInput(InputEvent @event)
@@ -217,9 +226,15 @@ public partial class KlotskiBlock : Panel
 	public void SetHighlight(bool active)
 	{
 		if (_spriteLoaded)
+		{
 			ApplyTransparentStyle();
+			if (_sprite != null)
+				_sprite.Modulate = active ? new Color(1.15f, 1.15f, 1.15f, 1f) : Colors.White;
+		}
 		else
+		{
 			ApplyFallbackStyle();
+		}
 
 		QueueRedraw();
 	}
@@ -238,28 +253,24 @@ public partial class KlotskiBlock : Panel
 			new Vector2(w - m * 2f, h - m * 2f)
 		);
 
-		// Top highlight
 		DrawLine(
 			new Vector2(rect.Position.X + 6f, rect.Position.Y + 3f),
 			new Vector2(rect.End.X - 6f,      rect.Position.Y + 3f),
 			_baseColor.Lightened(0.45f), 1.5f
 		);
 
-		// Left highlight
 		DrawLine(
 			new Vector2(rect.Position.X + 3f, rect.Position.Y + 6f),
 			new Vector2(rect.Position.X + 3f, rect.End.Y - 6f),
 			_baseColor.Lightened(0.20f), 1.0f
 		);
 
-		// Bottom shadow
 		DrawLine(
 			new Vector2(rect.Position.X + 6f, rect.End.Y - 3f),
 			new Vector2(rect.End.X - 4f,      rect.End.Y - 3f),
 			_baseColor.Darkened(0.35f), 1.5f
 		);
 
-		// Right shadow
 		DrawLine(
 			new Vector2(rect.End.X - 3f, rect.Position.Y + 6f),
 			new Vector2(rect.End.X - 3f, rect.End.Y - 4f),

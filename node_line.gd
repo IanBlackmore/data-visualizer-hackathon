@@ -4,8 +4,8 @@ extends MeshInstance3D
 var storedSize: float
 var nodeID1: int
 var nodeID2: int
+var is_short_path: bool = false
 
-# Called when the node enters the scene tree for the first time.
 func _ready():
 	pass
 
@@ -16,31 +16,38 @@ func changeHeight(size: float):
 	storedSize = size
 	mesh = cylinder
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	pass
 
 func set_connection_shortpath():
+	if is_short_path:
+		return
+
+	is_short_path = true
 	material_override = load("res://greenLineMat.tres")
-	mesh.top_radius *= 3
-	mesh.bottom_radius *= 3
+
+	if mesh is CylinderMesh:
+		mesh = mesh.duplicate(true)
+		mesh.top_radius = 0.6
+		mesh.bottom_radius = 0.6
 
 func set_connection_geminipath():
 	material_override = load("res://redLineMat.tres")
 
-func create_line(first: Vector3, second: Vector3, id1:int,id2:int):
-	position = (first + second)/2
+func create_line(first: Vector3, second: Vector3, id1: int, id2: int):
+	position = (first + second) / 2.0
 	material_override = load("res://whiteMat.tres")
-	var distance = (first.distance_to(second))
-	if distance == 0:
+
+	var distance := first.distance_to(second)
+	if distance <= 0.01:
 		distance = 0.5
-	scale.y = distance / 2
-	if (position != first):
+
+	# Cylinder height is 1, so scale.y should be the full distance.
+	scale.y = distance
+
+	if position != first:
 		look_at_from_position(position, first, Vector3(0, 1, 0.001))
-	# this is to fix the rotation, since the direction it faces is 90 degrees off from intended
 	rotation_degrees.x += 90
-	
+
 	nodeID1 = id1
 	nodeID2 = id2
-	
-	

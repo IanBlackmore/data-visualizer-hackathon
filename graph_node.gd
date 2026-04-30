@@ -1,44 +1,40 @@
 class_name Graphnode
 extends Area3D
 
-var ID: int
-var boardMatrix: Array[Array]
-var connections: Array[NodeLine]
+var ID: int = -1
+var boardMatrix: Array[Array] = []
+var connections: Array[NodeLine] = []
 var prevMat: Material
-var isWinningPosition: bool
-var velocity: Vector3
+var isWinningPosition: bool = false
+var velocity: Vector3 = Vector3.ZERO
 
-# Called when the node enters the scene tree for the first time.
 func _ready():
 	velocity = Vector3.ZERO
 	isWinningPosition = false
+	connections = []
 	$MeshInstance3D.material_override = load("res://whiteMat.tres")
 	prevMat = load("res://whiteMat.tres")
-	AutoloadSignals.nodeSelected.connect(_on_node_selected)
 
+	if not AutoloadSignals.nodeSelected.is_connected(_on_node_selected):
+		AutoloadSignals.nodeSelected.connect(_on_node_selected)
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 
 func set_board_matrix(matrix: Array[Array]):
-	boardMatrix = matrix
+	boardMatrix = matrix.duplicate(true)
 
 func get_board_matrix() -> Array[Array]:
 	return boardMatrix
 
-
-
-func set_node_position(xPos:float, yPos:float, zPos:float):
-	$".".position = Vector3(xPos, yPos, zPos)
-
+func set_node_position(xPos: float, yPos: float, zPos: float):
+	position = Vector3(xPos, yPos, zPos)
 
 func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		print("Shape " + str(ID) + " Clicked!")
-		#do other stuff to display current instance of graph
 		set_node_selected()
-		AutoloadSignals.updateBoard.emit(boardMatrix)
+		AutoloadSignals.updateBoard.emit(boardMatrix.duplicate(true))
 
 func _on_node_selected():
 	$MeshInstance3D.material_override = prevMat

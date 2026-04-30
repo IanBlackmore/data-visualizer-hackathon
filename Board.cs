@@ -20,24 +20,27 @@ public partial class Board : Control
 	[Export] public bool AutoSolveOnReady = true;
 	[Export] public bool AutoPlaySolution = true;
 	[Export] public float SolutionStepDelay = 0.3f;
+
 	private Godot.Collections.Array winStates = new Godot.Collections.Array();
 	private Godot.Collections.Dictionary adjacency = new Godot.Collections.Dictionary();
 
 	private const int sideLength = 6;
+	private const byte EmptyCell = 46; // '.'
 
 	private Vector2I _gridSize = new Vector2I(sideLength, sideLength);
 	private List<KlotskiBlock> _blocks = new();
 	private KlotskiBlock _selectedBlock = null;
 	private bool _won = false;
 	private bool _playingSolution = false;
+	private int _playbackGeneration = 0;
 
 	private AnimatedSprite2D _boardSprite;
 	private Vector2 _boardFrameSize = Vector2.Zero;
 
-	private readonly Color _boardColor       = new Color(0.14f, 0.11f, 0.09f);
-	private readonly Color _gridLineColor    = new Color(1f,    1f,    1f,    0.12f);
-	private readonly Color _borderColor      = new Color(0.50f, 0.38f, 0.26f);
-	private readonly Color _heroColor        = new Color(0.80f, 0.25f, 0.22f);
+	private readonly Color _boardColor        = new Color(0.14f, 0.11f, 0.09f);
+	private readonly Color _gridLineColor     = new Color(1f,    1f,    1f,    0.12f);
+	private readonly Color _borderColor       = new Color(0.50f, 0.38f, 0.26f);
+	private readonly Color _heroColor         = new Color(0.80f, 0.25f, 0.22f);
 	private readonly Color _neutralBlockColor = new Color(0.64f, 0.63f, 0.58f);
 
 	private int _exitRow = 2;
@@ -46,19 +49,35 @@ public partial class Board : Control
 	public override void _Ready()
 	{
 		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
-		LoadMatrixFromFile("res://Layouts/level2.json");
+
+		LoadBoardAnimation();
+		LoadMatrixFromFile(LevelPath);
 		QueueRedraw();
 
-		GetNode("/root/AutoloadSignals").Connect("updateBoard", new Callable(this, MethodName.OnUpdateBoard));
+		Node autoload = GetNodeOrNull<Node>("/root/AutoloadSignals");
+		if (autoload != null)
+		{
+			Callable updateBoardCallable = new Callable(this, MethodName.OnUpdateBoard);
+			if (!autoload.IsConnected("updateBoard", updateBoardCallable))
+				autoload.Connect("updateBoard", updateBoardCallable);
+		}
+		else
+		{
+			GD.PrintErr("AutoloadSignals was not found. Graph node clicks will not update the board.");
+		}
 
-		GD.Print("Board ready. Launching BFS Solver...");
-		SolvePuzzle();
+		if (AutoSolveOnReady)
+		{
+			GD.Print("Board ready. Launching BFS Solver...");
+			SolvePuzzle();
+		}
 	}
 
 	private void OnUpdateBoard(Godot.Collections.Array gdMatrix)
 	{
 		int rows = gdMatrix.Count;
 		int[][] matrix = new int[rows][];
+
 		for (int y = 0; y < rows; y++)
 		{
 			var row = gdMatrix[y].AsGodotArray();
@@ -66,6 +85,7 @@ public partial class Board : Control
 			for (int x = 0; x < row.Count; x++)
 				matrix[y][x] = row[x].AsInt32();
 		}
+
 		LoadMatrixLayout(matrix);
 	}
 
@@ -75,6 +95,10 @@ public partial class Board : Control
 
 	public void SolvePuzzle()
 	{
+		StopPlayback();
+		winStates.Clear();
+		adjacency.Clear();
+
 		var queue   = new Queue<byte[,]>();
 		var visited = new Dictionary<string, string>();
 		string firstWinHash = null;
@@ -89,14 +113,19 @@ public partial class Board : Control
 
 		while (queue.Count > 0)
 		{
-			byte[,] current     = queue.Dequeue();
-			string currentHash  = SerializeState(current);
+			byte[,] current    = queue.Dequeue();
+			string currentHash = SerializeState(current);
 
-			if (IsWinState(current) && firstWinHash == null)
+			if (IsWinState(current))
 			{
-				firstWinHash = currentHash;
-				winStates.Add(currentHash);
-				GD.Print("Shortest path found! Continuing to map remaining states...");
+				if (!winStates.Contains(currentHash))
+					winStates.Add(currentHash);
+
+				if (firstWinHash == null)
+				{
+					firstWinHash = currentHash;
+					GD.Print("Shortest path found! Continuing to map remaining states...");
+				}
 			}
 
 			var neighbors = new Godot.Collections.Array();
@@ -104,23 +133,29 @@ public partial class Board : Control
 			{
 				string nextHash = serializeState(next);
 				neighbors.Add(nextHash);
+
 				if (!visited.ContainsKey(nextHash))
 				{
 					visited.Add(nextHash, currentHash);
 					queue.Enqueue(next);
 				}
 			}
+
 			adjacency[currentHash] = neighbors;
 		}
 
 		GD.Print($"Discovery complete. {visited.Count} states, {winStates.Count} win states.");
 
 		var graphData = new Godot.Collections.Dictionary();
-		graphData["adjacency"] = adjacency;
+		graphData["adjacency"]  = adjacency;
 		graphData["win_states"] = winStates;
-		graphData["start"] = startHash;
+		graphData["start"]      = startHash;
+		graphData["width"]      = _gridSize.X;
+		graphData["height"]     = _gridSize.Y;
 		GetTree().Root.SetMeta("klotski_graph", graphData);
-		GetNode("/root/AutoloadSignals").EmitSignal("graph_ready");
+
+		Node autoload = GetNodeOrNull<Node>("/root/AutoloadSignals");
+		autoload?.EmitSignal("graph_ready");
 
 		if (firstWinHash != null)
 		{
@@ -149,7 +184,10 @@ public partial class Board : Control
 
 		path.Reverse();
 		string[] arr = path.ToArray();
-		GetNode("/root/AutoloadSignals").EmitSignal("winning_path", arr);
+
+		Node autoload = GetNodeOrNull<Node>("/root/AutoloadSignals");
+		autoload?.EmitSignal("winning_path", arr);
+
 		return path;
 	}
 
@@ -165,6 +203,9 @@ public partial class Board : Control
 			foreach (var currB in currBlocks)
 			{
 				var prevB = prevBlocks.Find(b => b.Type == currB.Type);
+				if (prevB.Type != currB.Type)
+					continue;
+
 				if (prevB.Pos != currB.Pos)
 				{
 					string dir = GetDirectionName(currB.Pos - prevB.Pos);
@@ -187,20 +228,30 @@ public partial class Board : Control
 
 	private async void PlaySolution(List<string> path)
 	{
-		if (_playingSolution) return;
+		if (_playingSolution)
+			return;
 
+		int generation = _playbackGeneration;
 		_playingSolution = true;
+		_selectedBlock?.SetHighlight(false);
+		_selectedBlock = null;
+
 		GD.Print($"Playing back {path.Count - 1} moves...");
 
 		for (int i = 1; i < path.Count; i++)
 		{
-			await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
+			if (generation != _playbackGeneration || !IsInstanceValid(this))
+				break;
+
 			ApplyStateToBoard(path[i]);
-			await ToSignal(GetTree().CreateTimer(SolutionStepDelay), "timeout");
+			await ToSignal(GetTree().CreateTimer(SolutionStepDelay), SceneTreeTimer.SignalName.Timeout);
 		}
 
-		_playingSolution = false;
-		GD.Print("Playback finished!");
+		if (generation == _playbackGeneration)
+		{
+			_playingSolution = false;
+			GD.Print("Playback finished!");
+		}
 	}
 
 	private void ApplyStateToBoard(string state)
@@ -208,8 +259,18 @@ public partial class Board : Control
 		foreach (var bData in FindBlocksInGrid(DeserializeState(state)))
 		{
 			var physicalBlock = _blocks.Find(b => b.ID == ((char)bData.Type).ToString());
-			physicalBlock?.SlideTo(bData.Pos);
+			if (physicalBlock == null)
+				continue;
+
+			if (physicalBlock.GridPos != bData.Pos)
+				physicalBlock.SlideTo(bData.Pos);
 		}
+	}
+
+	private void StopPlayback()
+	{
+		_playbackGeneration++;
+		_playingSolution = false;
 	}
 
 	// -------------------------------------------------------------------------
@@ -218,44 +279,63 @@ public partial class Board : Control
 
 	private byte[,] DeserializeState(string state)
 	{
-		byte[,] grid = new byte[sideLength, sideLength];
+		int width  = _gridSize.X;
+		int height = _gridSize.Y;
+
+		if (state.Length != width * height)
+		{
+			if (state.Length == sideLength * sideLength)
+			{
+				width = sideLength;
+				height = sideLength;
+			}
+			else
+			{
+				GD.PrintErr($"State length {state.Length} does not match board size {_gridSize.X}x{_gridSize.Y}.");
+			}
+		}
+
+		byte[,] grid = new byte[width, height];
 		int i = 0;
 
-		// Must mirror SerializeState exactly: y outer, x inner, full sideLength
-		// in both dimensions. The previous 4x5 loop was a leftover from when
-		// the game used a 4-wide x 5-tall traditional Klotski board, and it
-		// was the root cause of the playback corruption that put blocks at
-		// out-of-bounds positions and crashed the next interaction.
-		for (int y = 0; y < sideLength; y++)
-			for (int x = 0; x < sideLength; x++)
-				grid[x, y] = (byte)state[i++];
+		for (int y = 0; y < height; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				grid[x, y] = i < state.Length ? (byte)state[i++] : EmptyCell;
+			}
+		}
 
 		return grid;
 	}
 
 	public byte[,] GetState2D()
 	{
-		byte[,] grid = new byte[sideLength, sideLength];
-		for (int y = 0; y < sideLength; y++)
-			for (int x = 0; x < sideLength; x++)
-				grid[x, y] = (byte)'.';
+		byte[,] grid = new byte[_gridSize.X, _gridSize.Y];
+		for (int y = 0; y < _gridSize.Y; y++)
+			for (int x = 0; x < _gridSize.X; x++)
+				grid[x, y] = EmptyCell;
 
 		foreach (var block in _blocks)
 		{
 			byte sym = (byte)block.ID[0];
+
 			for (int x = 0; x < block.BlockSize.X; x++)
+			{
 				for (int y = 0; y < block.BlockSize.Y; y++)
 				{
 					int gx = block.GridPos.X + x;
 					int gy = block.GridPos.Y + y;
-					// Defensive: ignore cells outside the grid rather than
-					// crashing. Should never happen now that DeserializeState
-					// is correct, but keeps the game alive if something else
-					// ever puts a block off-grid.
-					if (gx < 0 || gx >= sideLength || gy < 0 || gy >= sideLength)
+
+					if (gx < 0 || gx >= _gridSize.X || gy < 0 || gy >= _gridSize.Y)
+					{
+						GD.PrintErr($"Block {block.ID} is outside the board at ({gx}, {gy}).");
 						continue;
+					}
+
 					grid[gx, gy] = sym;
 				}
+			}
 		}
 
 		return grid;
@@ -263,26 +343,33 @@ public partial class Board : Control
 
 	public string SerializeState(byte[,] grid)
 	{
-		char[] flattenedState = new char[sideLength * sideLength];
+		int width  = grid.GetLength(0);
+		int height = grid.GetLength(1);
+
+		char[] flattenedState = new char[width * height];
 		int ind = 0;
-		for (int y = 0; y < sideLength; y++)
-			for (int x = 0; x < sideLength; x++)
+
+		for (int y = 0; y < height; y++)
+			for (int x = 0; x < width; x++)
 				flattenedState[ind++] = (char)grid[x, y];
+
 		return new string(flattenedState);
 	}
 
 	private bool IsWinState(byte[,] grid)
 	{
-		byte heroId = (byte)'1'; 
-		if(grid[5,2] == heroId) {
-			return true;
-		}
-		return false;
+		byte heroId = (byte)'1';
+		int width = grid.GetLength(0);
+		int height = grid.GetLength(1);
+
+		if (_exitRow < 0 || _exitRow >= height)
+			return false;
+
+		return grid[width - 1, _exitRow] == heroId;
 	}
 
 	// Lowercase alias kept for backward compatibility.
 	public string serializeState(byte[,] grid) => SerializeState(grid);
-
 
 	// -------------------------------------------------------------------------
 	// BFS helpers
@@ -294,29 +381,46 @@ public partial class Board : Control
 		var directions = new[] { Vector2I.Right, Vector2I.Left, Vector2I.Down, Vector2I.Up };
 
 		foreach (var b in FindBlocksInGrid(currentGrid))
+		{
 			foreach (var dir in directions)
 			{
 				if (IsDirectionAllowed(b.Size, dir) && CanMoveBFS(currentGrid, b.Pos, b.Size, dir))
 					neighbors.Add(ApplyMove(currentGrid, b.Pos, b.Size, dir));
 			}
+		}
+
 		return neighbors;
 	}
 
 	public bool CanMoveBFS(byte[,] grid, Vector2I currentPos, Vector2I size, Vector2I direction)
 	{
+		if (direction == Vector2I.Zero)
+			return false;
+
 		if (size.X > size.Y && direction.Y != 0) return false;
 		if (size.Y > size.X && direction.X != 0) return false;
 
+		int width = grid.GetLength(0);
+		int height = grid.GetLength(1);
 		Vector2I nextPos = currentPos + direction;
 
 		for (int x = 0; x < size.X; x++)
 		{
 			for (int y = 0; y < size.Y; y++)
 			{
-				int tx = nextPos.X + x; int ty = nextPos.Y + y;
-				if (tx < 0 || tx >= sideLength || ty < 0 || ty >= sideLength) return false;
-				bool self = (tx >= currentPos.X && tx < currentPos.X + size.X && ty >= currentPos.Y && ty < currentPos.Y + size.Y);
-				if (!self && grid[tx, ty] != (byte)'.') return false;
+				int tx = nextPos.X + x;
+				int ty = nextPos.Y + y;
+
+				if (tx < 0 || tx >= width || ty < 0 || ty >= height)
+					return false;
+
+				bool self = tx >= currentPos.X &&
+							tx < currentPos.X + size.X &&
+							ty >= currentPos.Y &&
+							ty < currentPos.Y + size.Y;
+
+				if (!self && grid[tx, ty] != EmptyCell)
+					return false;
 			}
 		}
 
@@ -326,11 +430,11 @@ public partial class Board : Control
 	private byte[,] ApplyMove(byte[,] grid, Vector2I pos, Vector2I size, Vector2I dir)
 	{
 		byte[,] next = (byte[,])grid.Clone();
-		byte sym     = grid[pos.X, pos.Y];
+		byte sym = grid[pos.X, pos.Y];
 
 		for (int x = 0; x < size.X; x++)
 			for (int y = 0; y < size.Y; y++)
-				next[pos.X + x, pos.Y + y] = (byte)'.';
+				next[pos.X + x, pos.Y + y] = EmptyCell;
 
 		for (int x = 0; x < size.X; x++)
 			for (int y = 0; y < size.Y; y++)
@@ -350,12 +454,15 @@ public partial class Board : Control
 	{
 		List<BlockData> blocks = new();
 		HashSet<byte> processedIds = new();
-		for (int y = 0; y < sideLength; y++) 
+		int width = grid.GetLength(0);
+		int height = grid.GetLength(1);
+
+		for (int y = 0; y < height; y++)
 		{
-			for (int x = 0; x < sideLength; x++) 
+			for (int x = 0; x < width; x++)
 			{
 				byte id = grid[x, y];
-				if (id != (byte)'.' && !processedIds.Contains(id))
+				if (id != EmptyCell && !processedIds.Contains(id))
 				{
 					Vector2I sz = MeasureBlock(grid, x, y, id);
 					blocks.Add(new BlockData { Pos = new Vector2I(x, y), Size = sz, Type = id });
@@ -363,14 +470,20 @@ public partial class Board : Control
 				}
 			}
 		}
+
 		return blocks;
 	}
 
 	private Vector2I MeasureBlock(byte[,] grid, int startX, int startY, byte id)
 	{
-		int w = 0; int h = 0;
-		for (int x = startX; x < sideLength && grid[x, startY] == id; x++) w++;
-		for (int y = startY; y < sideLength && grid[startX, y] == id; y++) h++;
+		int width = grid.GetLength(0);
+		int height = grid.GetLength(1);
+		int w = 0;
+		int h = 0;
+
+		for (int x = startX; x < width && grid[x, startY] == id; x++) w++;
+		for (int y = startY; y < height && grid[startX, y] == id; y++) h++;
+
 		return new Vector2I(w, h);
 	}
 
@@ -380,7 +493,9 @@ public partial class Board : Control
 
 	private void CheckWin(KlotskiBlock block)
 	{
-		if (block.ID == "1" && block.GridPos.X + block.BlockSize.X >= _gridSize.X && block.GridPos.Y == _exitRow)
+		if (block.ID == "1" &&
+			block.GridPos.X + block.BlockSize.X >= _gridSize.X &&
+			block.GridPos.Y == _exitRow)
 		{
 			_won = true;
 			block.PlayWinAnimation();
@@ -392,7 +507,8 @@ public partial class Board : Control
 
 	public void SelectBlock(KlotskiBlock block)
 	{
-		if (_won || _playingSolution) return;
+		if (_won || _playingSolution)
+			return;
 
 		_selectedBlock?.SetHighlight(false);
 		_selectedBlock = block;
@@ -403,7 +519,8 @@ public partial class Board : Control
 
 	public override void _Input(InputEvent @event)
 	{
-		if (_won || _playingSolution) return;
+		if (_won || _playingSolution)
+			return;
 
 		if (@event.IsActionPressed("export_board") ||
 			(@event is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Right && mb.Pressed))
@@ -412,14 +529,18 @@ public partial class Board : Control
 			return;
 		}
 
-		if (_selectedBlock == null) return;
+		if (_selectedBlock == null || _selectedBlock.IsSliding)
+			return;
 
 		Vector2I dir = Vector2I.Zero;
 		if (@event.IsActionPressed("ui_up"))    dir = Vector2I.Up;
 		if (@event.IsActionPressed("ui_down"))  dir = Vector2I.Down;
 		if (@event.IsActionPressed("ui_left"))  dir = Vector2I.Left;
 		if (@event.IsActionPressed("ui_right")) dir = Vector2I.Right;
-		if (dir != Vector2I.Zero && IsDirectionAllowed(_selectedBlock.BlockSize, dir) && CanMoveBFS(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
+
+		if (dir != Vector2I.Zero &&
+			IsDirectionAllowed(_selectedBlock.BlockSize, dir) &&
+			CanMoveBFS(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
 		{
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
 			CheckWin(_selectedBlock);
@@ -430,10 +551,9 @@ public partial class Board : Control
 	{
 		if (size.X > size.Y) return dir == Vector2I.Left || dir == Vector2I.Right;
 		if (size.Y > size.X) return dir == Vector2I.Up || dir == Vector2I.Down;
-		return true; // square (2×2 hero) moves in all directions
+		return true; // square blocks can move in all directions
 	}
 
-	
 	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
 	{
 		if (BlockTemplate == null)
@@ -468,6 +588,7 @@ public partial class Board : Control
 		{
 			GD.PrintErr($"Board sprite not found: {BoardSpritePath}. Using fallback drawn board.");
 			_boardSprite = null;
+			_boardFrameSize = Vector2.Zero;
 			return;
 		}
 
@@ -478,6 +599,7 @@ public partial class Board : Control
 		if (tex == null)
 		{
 			GD.PrintErr($"Could not load board sprite: {BoardSpritePath}");
+			_boardFrameSize = Vector2.Zero;
 			return;
 		}
 
@@ -561,23 +683,19 @@ public partial class Board : Control
 
 	private void DrawBoardOutline(float boardW, float boardH)
 	{
-		// boardW and boardH should now be (6 * CellSize)
-		float thick = 4f; 
-		float exitY = _exitRow * CellSize; 
+		float thick = 4f;
+		float exitY = GridOffset.Y + _exitRow * CellSize;
 		float exitH = _exitHeightCells * CellSize;
+		float left   = GridOffset.X;
+		float right  = GridOffset.X + boardW;
+		float top    = GridOffset.Y;
+		float bottom = GridOffset.Y + boardH;
 
-		// Top Border
-		DrawLine(Vector2.Zero, new Vector2(boardW, 0), _borderColor, thick);
-		// Bottom Border
-		DrawLine(new Vector2(0, boardH), new Vector2(boardW, boardH), _borderColor, thick);
-		// Left Border
-		DrawLine(Vector2.Zero, new Vector2(0, boardH), _borderColor, thick);
-		
-		// Right Border (with Exit Gap)
-		// Draw from top to the start of the exit
-		DrawLine(new Vector2(boardW, 0), new Vector2(boardW, exitY), _borderColor, thick);
-		// Draw from the end of the exit to the bottom
-		DrawLine(new Vector2(boardW, exitY + exitH), new Vector2(boardW, boardH), _borderColor, thick);
+		DrawLine(new Vector2(left, top), new Vector2(right, top), _borderColor, thick);
+		DrawLine(new Vector2(left, bottom), new Vector2(right, bottom), _borderColor, thick);
+		DrawLine(new Vector2(left, top), new Vector2(left, bottom), _borderColor, thick);
+		DrawLine(new Vector2(right, top), new Vector2(right, exitY), _borderColor, thick);
+		DrawLine(new Vector2(right, exitY + exitH), new Vector2(right, bottom), _borderColor, thick);
 	}
 
 	// -------------------------------------------------------------------------
@@ -618,7 +736,7 @@ public partial class Board : Control
 			var row = gridList[y].AsGodotArray();
 			matrix[y] = new int[row.Count];
 			for (int x = 0; x < row.Count; x++)
-				matrix[y][x] = (int)row[x];
+				matrix[y][x] = row[x].AsInt32();
 		}
 
 		LoadMatrixLayout(matrix);
@@ -626,14 +744,14 @@ public partial class Board : Control
 
 	public void LoadMatrixLayout(int[][] matrix)
 	{
-		if (matrix == null || matrix.Length == 0 || matrix[0].Length == 0)
+		if (matrix == null || matrix.Length == 0 || matrix[0] == null || matrix[0].Length == 0)
 		{
 			GD.PrintErr("Cannot load empty matrix.");
 			return;
 		}
 
+		StopPlayback();
 		_won = false;
-		_playingSolution = false;
 		_selectedBlock?.SetHighlight(false);
 		_selectedBlock = null;
 
@@ -643,7 +761,8 @@ public partial class Board : Control
 
 		_blocks.Clear();
 
-		_gridSize = new Vector2I(matrix[0].Length, matrix.Length);
+		int[][] normalized = NormalizeMatrixToBoard(matrix);
+		_gridSize = new Vector2I(normalized[0].Length, normalized.Length);
 		UpdateBoardMinimumSize();
 
 		bool[,] visited = new bool[_gridSize.X, _gridSize.Y];
@@ -652,16 +771,38 @@ public partial class Board : Control
 		{
 			for (int x = 0; x < _gridSize.X; x++)
 			{
-				int id = matrix[y][x];
-				if (id == 0 || visited[x, y]) continue;
+				int id = normalized[y][x];
+				if (id == 0 || visited[x, y])
+					continue;
 
-				var block = ExtractBlockFromMatrix(matrix, id, x, y, visited);
+				var block = ExtractBlockFromMatrix(normalized, id, x, y, visited);
 				CreateBlock(block.id, block.pos, block.size,
-							block.id == "1" ? _heroColor : _neutralBlockColor);
+					block.id == "1" ? _heroColor : _neutralBlockColor);
 			}
 		}
 
 		QueueRedraw();
+	}
+
+	private int[][] NormalizeMatrixToBoard(int[][] matrix)
+	{
+		int[][] normalized = new int[sideLength][];
+		for (int y = 0; y < sideLength; y++)
+			normalized[y] = new int[sideLength];
+
+		for (int y = 0; y < Math.Min(matrix.Length, sideLength); y++)
+		{
+			if (matrix[y] == null)
+				continue;
+
+			for (int x = 0; x < Math.Min(matrix[y].Length, sideLength); x++)
+				normalized[y][x] = matrix[y][x];
+		}
+
+		if (matrix.Length != sideLength || matrix[0].Length != sideLength)
+			GD.Print($"Loaded matrix was {matrix[0].Length}x{matrix.Length}; normalized to {sideLength}x{sideLength} for the board/graph solver.");
+
+		return normalized;
 	}
 
 	private (string id, Vector2I pos, Vector2I size) ExtractBlockFromMatrix(
@@ -698,7 +839,6 @@ public partial class Board : Control
 		return (id.ToString(), new Vector2I(minX, minY), new Vector2I(maxX - minX + 1, maxY - minY + 1));
 	}
 
-
 	public int[][] ExportMatrixLayout()
 	{
 		int[][] matrix = new int[_gridSize.Y][];
@@ -710,12 +850,16 @@ public partial class Board : Control
 			int id = int.Parse(block.ID);
 			for (int dy = 0; dy < block.BlockSize.Y; dy++)
 				for (int dx = 0; dx < block.BlockSize.X; dx++)
-					matrix[block.GridPos.Y + dy][block.GridPos.X + dx] = id;
+				{
+					int x = block.GridPos.X + dx;
+					int y = block.GridPos.Y + dy;
+					if (x >= 0 && x < _gridSize.X && y >= 0 && y < _gridSize.Y)
+						matrix[y][x] = id;
+				}
 		}
 
 		return matrix;
 	}
-
 
 	public void SaveMatrixToFile(string path)
 	{
@@ -731,23 +875,18 @@ public partial class Board : Control
 
 	public string ExportMatrixJson()
 	{
-		int[][] matrix = new int[_gridSize.Y][];
-		for (int y = 0; y < _gridSize.Y; y++) matrix[y] = new int[_gridSize.X];
-		foreach (var b in _blocks)
-		{
-			int id = int.Parse(b.ID);
-			for (int dy = 0; dy < b.BlockSize.Y; dy++)
-				for (int dx = 0; dx < b.BlockSize.X; dx++)
-					matrix[b.GridPos.Y + dy][b.GridPos.X + dx] = id;
-		}
+		int[][] matrix = ExportMatrixLayout();
+
 		var outer = new Godot.Collections.Array();
-		foreach (var rowArr in matrix) {
+		foreach (var rowArr in matrix)
+		{
 			var row = new Godot.Collections.Array();
-			foreach (int val in rowArr) row.Add(val);
+			foreach (int val in rowArr)
+				row.Add(val);
 			outer.Add(row);
 		}
+
 		var dict = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
 		return Json.Stringify(dict, "\t");
 	}
-
 }
