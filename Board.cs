@@ -268,7 +268,6 @@ public partial class Board : Control
 	// Lowercase alias kept for backward compatibility.
 	public string serializeState(byte[,] grid) => SerializeState(grid);
 
-	private bool IsWinState(byte[,] grid) => grid[3, 2] == (byte)'1';
 
 	// -------------------------------------------------------------------------
 	// BFS helpers
@@ -337,6 +336,7 @@ public partial class Board : Control
 		List<BlockData> blocks = new();
 		HashSet<byte> processedIds = new();
 		for (int y = 0; y < sideLength; y++) 
+		{
 			for (int x = 0; x < sideLength; x++) 
 			{
 				byte id = grid[x, y];
@@ -348,7 +348,6 @@ public partial class Board : Control
 				}
 			}
 		}
-
 		return blocks;
 	}
 
@@ -363,37 +362,6 @@ public partial class Board : Control
 	// -------------------------------------------------------------------------
 	// Player interaction
 	// -------------------------------------------------------------------------
-
-	// public bool CanMove(KlotskiBlock block, Vector2I direction)
-	// {
-	// 	if (block == null) return false;
-	// 	if (block.BlockSize.X > block.BlockSize.Y && direction.Y != 0) return false;
-	// 	if (block.BlockSize.Y > block.BlockSize.X && direction.X != 0) return false;
-
-	// 	Vector2I newPos = block.GridPos + direction;
-
-	// 	if (newPos.X < 0 || newPos.Y < 0 ||
-	// 		newPos.X + block.BlockSize.X > _gridSize.X ||
-	// 		newPos.Y + block.BlockSize.Y > _gridSize.Y)
-	// 	{
-	// 		return false;
-	// 	}
-
-	// 	foreach (var other in _blocks)
-	// 	{
-	// 		if (other == block) continue;
-
-	// 		bool overlaps =
-	// 			newPos.X < other.GridPos.X + other.BlockSize.X &&
-	// 			newPos.X + block.BlockSize.X > other.GridPos.X &&
-	// 			newPos.Y < other.GridPos.Y + other.BlockSize.Y &&
-	// 			newPos.Y + block.BlockSize.Y > other.GridPos.Y;
-
-	// 		if (overlaps) return false;
-	// 	}
-
-	// 	return true;
-	// }
 
 	private void CheckWin(KlotskiBlock block)
 	{
