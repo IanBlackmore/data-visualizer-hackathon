@@ -254,12 +254,12 @@ public partial class BottomBar : Control
 			"TASK:\n" +
 			"Given the following board state, compute:\n" +
 			"1. The MINIMUM number of moves required to reach the winning state.\n" +
-			"2. A step-by-step ordered list of moves.\n\n" +
+			"2. An ordered list of board positions.\n\n" +
 			"REQUIRED OUTPUT FORMAT:\n" +
 			"--- MOVE SEQUENCE TO SOLUTION ---\n" +
-			"Step 1: Block 'X' moved DIRECTION to (newX, newY)\n" +
-			"Step 2: Block 'Y' moved DIRECTION to (newX, newY)\n" +
-			"...\n" +
+			"......11..22........77..66........55..44..\n" +
+			"Where a . represents an empty space and numbers represent unique tiles.\n " +
+			"Grids are 6x6 rows. Separate different positions with new strings in JSON format\n" +
 			"Total Moves: N\n" +
 			"---------------------------------\n\n" +
 			"Here is the board JSON to analyze:\n" +
@@ -380,6 +380,7 @@ public partial class BottomBar : Control
 		   using var file = FileAccess.Open(savePath, FileAccess.ModeFlags.Write);
 		   file.StoreString(jsonString);
 		   GD.Print($"Gemini response saved to {savePath}");
+			GetNode("root/AutoloadSignals").EmitSignal("gemini_response")
 	   }
 
 

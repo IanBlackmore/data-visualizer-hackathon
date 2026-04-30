@@ -1,8 +1,8 @@
 {
   "steps": [
-    "Step 1: Block \u00271\u0027 moved RIGHT to (1, 2)",
-    "Step 2: Block \u00271\u0027 moved RIGHT to (2, 2)",
-    "Step 3: Block \u00271\u0027 moved RIGHT to (3, 2)",
+	"Step 1: Block \u00271\u0027 moved RIGHT to (1, 2)",
+	"Step 2: Block \u00271\u0027 moved RIGHT to (2, 2)",
+	"Step 3: Block \u00271\u0027 moved RIGHT to (3, 2)",
     "Step 4: Block \u00271\u0027 moved RIGHT to (4, 2)"
   ],
   "total_moves": 4

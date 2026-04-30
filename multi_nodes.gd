@@ -37,6 +37,9 @@ func _ready():
 		AutoloadSignals.board_position_changed.connect(_on_board_position_changed)
 	if not call_good_path.is_connected(find_good_path):
 		call_good_path.connect(find_good_path)
+	if not AutoloadSignals.gemini_response.is_connected(_gemini_read):
+		AutoloadSignals.gemini_response.connect(_gemini_read)
+	
 
 	# Board may have already finished BFS before this node was ready.
 	if get_tree().root.has_meta("klotski_graph"):
@@ -211,6 +214,52 @@ func _on_path_ready(path: Array[String]):
 
 	for state_string in path:
 		trueArray.append(hash_to_matrix(state_string))
+
+func _gemini_read():
+	var jsonStr = load_json("res://Layouts/GeminiResponse.json")
+	var arr = []
+	for item in jsonStr:
+		arr.append(hash_to_matrix(item))
+	
+	if arr.is_empty() or nodeList.is_empty():
+		return
+
+	var current_index := -1
+	for item in nodeList:
+		if item.boardMatrix == arr[0]:
+			item.set_node_start()
+			current_index = item.ID
+			break
+
+	if current_index == -1:
+		print("Could not find the start node in the visible graph.")
+		return
+
+	for counter in range(1, arr.size()):
+		var found_next := false
+
+		for connection in nodeList[current_index].connections:
+			var candidate_id := connection.nodeID1 if connection.nodeID2 == current_index else connection.nodeID2
+			if candidate_id < 0 or candidate_id >= nodeList.size():
+				continue
+
+			if nodeList[candidate_id].boardMatrix == arr[counter]:
+				current_index = candidate_id
+				connection.set_connection_shortpath()
+				found_next = true
+				break
+
+		if not found_next:
+			print("Shortest path leaves the visible graph at step ", counter, ". Increase max_nodes if needed.")
+			return
+
+func load_json(path: String):
+	if FileAccess.file_exists(path):
+		var json_string = FileAccess.get_file_as_string(path)
+		var data = JSON.parse_string(json_string)
+		if data != null:
+			return data
+	return null
 
 func find_good_path():
 	if trueArray.is_empty() or nodeList.is_empty():
