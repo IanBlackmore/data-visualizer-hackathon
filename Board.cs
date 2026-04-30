@@ -23,8 +23,10 @@ public partial class Board : Control
 	private Godot.Collections.Array winStates = new Godot.Collections.Array();
 	private Godot.Collections.Dictionary adjacency = new Godot.Collections.Dictionary();
 
-	private Vector2I _gridSize = new Vector2I(4, 5);
-	private readonly List<KlotskiBlock> _blocks = new();
+	private const int sideLength = 6;
+
+	private Vector2I _gridSize = new Vector2I(sideLength, sideLength);
+	private List<KlotskiBlock> _blocks = new();
 	private KlotskiBlock _selectedBlock = null;
 	private bool _won = false;
 	private bool _playingSolution = false;
@@ -216,7 +218,7 @@ public partial class Board : Control
 
 	private byte[,] DeserializeState(string state)
 	{
-		byte[,] grid = new byte[4, 5];
+		byte[,] grid = new byte[sideLength, sideLength];
 		int i = 0;
 
 		for (int y = 0; y < 5; y++)
@@ -228,10 +230,9 @@ public partial class Board : Control
 
 	public byte[,] GetState2D()
 	{
-		byte[,] grid = new byte[4, 5];
-
-		for (int y = 0; y < 5; y++)
-			for (int x = 0; x < 4; x++)
+		byte[,] grid = new byte[sideLength, sideLength];
+		for (int y = 0; y < sideLength; y++)
+			for (int x = 0; x < sideLength; x++)
 				grid[x, y] = (byte)'.';
 
 		foreach (var block in _blocks)
@@ -247,14 +248,21 @@ public partial class Board : Control
 
 	public string SerializeState(byte[,] grid)
 	{
-		char[] flat = new char[20];
+		char[] flattenedState = new char[sideLength * sideLength];
 		int ind = 0;
+		for (int y = 0; y < sideLength; y++)
+			for (int x = 0; x < sideLength; x++)
+				flattenedState[ind++] = (char)grid[x, y];
+		return new string(flattenedState);
+	}
 
-		for (int y = 0; y < 5; y++)
-			for (int x = 0; x < 4; x++)
-				flat[ind++] = (char)grid[x, y];
-
-		return new string(flat);
+	private bool IsWinState(byte[,] grid)
+	{
+		byte heroId = (byte)'1'; 
+		if(grid[5,2] == heroId) {
+			return true;
+		}
+		return false;
 	}
 
 	// Lowercase alias kept for backward compatibility.
@@ -291,17 +299,10 @@ public partial class Board : Control
 		{
 			for (int y = 0; y < size.Y; y++)
 			{
-				int tx = nextPos.X + x;
-				int ty = nextPos.Y + y;
-
-				if (tx < 0 || tx >= 4 || ty < 0 || ty >= 5)
-					return false;
-
-				bool isSelf = tx >= currentPos.X && tx < currentPos.X + size.X &&
-							  ty >= currentPos.Y && ty < currentPos.Y + size.Y;
-
-				if (!isSelf && grid[tx, ty] != (byte)'.')
-					return false;
+				int tx = nextPos.X + x; int ty = nextPos.Y + y;
+				if (tx < 0 || tx >= sideLength || ty < 0 || ty >= sideLength) return false;
+				bool self = (tx >= currentPos.X && tx < currentPos.X + size.X && ty >= currentPos.Y && ty < currentPos.Y + size.Y);
+				if (!self && grid[tx, ty] != (byte)'.') return false;
 			}
 		}
 
@@ -333,12 +334,10 @@ public partial class Board : Control
 
 	private List<BlockData> FindBlocksInGrid(byte[,] grid)
 	{
-		var blocks      = new List<BlockData>();
-		var processedIds = new HashSet<byte>();
-
-		for (int y = 0; y < 5; y++)
-		{
-			for (int x = 0; x < 4; x++)
+		List<BlockData> blocks = new();
+		HashSet<byte> processedIds = new();
+		for (int y = 0; y < sideLength; y++) 
+			for (int x = 0; x < sideLength; x++) 
 			{
 				byte id = grid[x, y];
 				if (id != (byte)'.' && !processedIds.Contains(id))
@@ -355,9 +354,9 @@ public partial class Board : Control
 
 	private Vector2I MeasureBlock(byte[,] grid, int startX, int startY, byte id)
 	{
-		int w = 0, h = 0;
-		for (int x = startX; x < 4 && grid[x, startY] == id; x++) w++;
-		for (int y = startY; y < 5 && grid[startX, y] == id; y++) h++;
+		int w = 0; int h = 0;
+		for (int x = startX; x < sideLength && grid[x, startY] == id; x++) w++;
+		for (int y = startY; y < sideLength && grid[startX, y] == id; y++) h++;
 		return new Vector2I(w, h);
 	}
 
@@ -430,6 +429,7 @@ public partial class Board : Control
 			return;
 		}
 
+		if (@event.IsActionPressed("export_board")) { SaveMatrixToFile("res://Layouts/level1.json"); return; }
 		if (_selectedBlock == null) return;
 
 		Vector2I dir = Vector2I.Zero;
@@ -579,19 +579,23 @@ public partial class Board : Control
 
 	private void DrawBoardOutline(float boardW, float boardH)
 	{
-		float thick  = 4f;
-		float exitY  = GridOffset.Y + _exitRow * CellSize;
-		float exitH  = _exitHeightCells * CellSize;
-		float left   = GridOffset.X;
-		float right  = GridOffset.X + boardW;
-		float top    = GridOffset.Y;
-		float bottom = GridOffset.Y + boardH;
+		// boardW and boardH should now be (6 * CellSize)
+		float thick = 4f; 
+		float exitY = _exitRow * CellSize; 
+		float exitH = _exitHeightCells * CellSize;
 
-		DrawLine(new Vector2(left,  top),         new Vector2(right, top),         _borderColor, thick);
-		DrawLine(new Vector2(left,  bottom),      new Vector2(right, bottom),      _borderColor, thick);
-		DrawLine(new Vector2(left,  top),         new Vector2(left,  bottom),      _borderColor, thick);
-		DrawLine(new Vector2(right, top),         new Vector2(right, exitY),       _borderColor, thick);
-		DrawLine(new Vector2(right, exitY + exitH), new Vector2(right, bottom),   _borderColor, thick);
+		// Top Border
+		DrawLine(Vector2.Zero, new Vector2(boardW, 0), _borderColor, thick);
+		// Bottom Border
+		DrawLine(new Vector2(0, boardH), new Vector2(boardW, boardH), _borderColor, thick);
+		// Left Border
+		DrawLine(Vector2.Zero, new Vector2(0, boardH), _borderColor, thick);
+		
+		// Right Border (with Exit Gap)
+		// Draw from top to the start of the exit
+		DrawLine(new Vector2(boardW, 0), new Vector2(boardW, exitY), _borderColor, thick);
+		// Draw from the end of the exit to the bottom
+		DrawLine(new Vector2(boardW, exitY + exitH), new Vector2(boardW, boardH), _borderColor, thick);
 	}
 
 	// -------------------------------------------------------------------------
