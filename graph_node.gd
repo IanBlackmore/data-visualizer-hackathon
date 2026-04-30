@@ -53,7 +53,6 @@ func set_node_finish():
 	$MeshInstance3D.material_override = load("res://greenLineMat.tres")
 	prevMat = load("res://greenLineMat.tres")
 
-
 func set_node_start():
 	$MeshInstance3D.material_override = load("res://yellowLineMat.tres")
 	prevMat = load("res://yellowLineMat.tres")
