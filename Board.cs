@@ -30,10 +30,10 @@ public partial class Board : Control
 	private AnimatedSprite2D _boardSprite;
 	private Vector2 _boardFrameSize = Vector2.Zero;
 
-	private readonly Color _boardColor = new Color(0.14f, 0.11f, 0.09f);
-	private readonly Color _gridLineColor = new Color(1f, 1f, 1f, 0.12f);
-	private readonly Color _borderColor = new Color(0.50f, 0.38f, 0.26f);
-	private readonly Color _heroColor = new Color(0.80f, 0.25f, 0.22f);
+	private readonly Color _boardColor       = new Color(0.14f, 0.11f, 0.09f);
+	private readonly Color _gridLineColor    = new Color(1f,    1f,    1f,    0.12f);
+	private readonly Color _borderColor      = new Color(0.50f, 0.38f, 0.26f);
+	private readonly Color _heroColor        = new Color(0.80f, 0.25f, 0.22f);
 	private readonly Color _neutralBlockColor = new Color(0.64f, 0.63f, 0.58f);
 
 	private int _exitRow = 2;
@@ -56,14 +56,18 @@ public partial class Board : Control
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// Solver
+	// -------------------------------------------------------------------------
+
 	public void SolvePuzzle()
 	{
-		var queue = new Queue<byte[,]>();
+		var queue   = new Queue<byte[,]>();
 		var visited = new Dictionary<string, string>();
 		string firstWinHash = null;
 
 		byte[,] startState = GetState2D();
-		string startHash = SerializeState(startState);
+		string startHash   = SerializeState(startState);
 
 		queue.Enqueue(startState);
 		visited.Add(startHash, null);
@@ -72,8 +76,8 @@ public partial class Board : Control
 
 		while (queue.Count > 0)
 		{
-			byte[,] current = queue.Dequeue();
-			string currentHash = SerializeState(current);
+			byte[,] current     = queue.Dequeue();
+			string currentHash  = SerializeState(current);
 
 			if (IsWinState(current) && firstWinHash == null)
 			{
@@ -109,13 +113,13 @@ public partial class Board : Control
 
 	private List<string> ReconstructPath(Dictionary<string, string> visited, string winHash)
 	{
-		var path = new List<string>();
-		string current = winHash;
+		var path   = new List<string>();
+		string cur = winHash;
 
-		while (current != null)
+		while (cur != null)
 		{
-			path.Add(current);
-			current = visited[current];
+			path.Add(cur);
+			cur = visited[cur];
 		}
 
 		path.Reverse();
@@ -147,9 +151,9 @@ public partial class Board : Control
 
 	private string GetDirectionName(Vector2I dir)
 	{
-		if (dir == Vector2I.Up) return "UP";
-		if (dir == Vector2I.Down) return "DOWN";
-		if (dir == Vector2I.Left) return "LEFT";
+		if (dir == Vector2I.Up)    return "UP";
+		if (dir == Vector2I.Down)  return "DOWN";
+		if (dir == Vector2I.Left)  return "LEFT";
 		if (dir == Vector2I.Right) return "RIGHT";
 		return dir.ToString();
 	}
@@ -180,6 +184,10 @@ public partial class Board : Control
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// State serialization
+	// -------------------------------------------------------------------------
+
 	private byte[,] DeserializeState(string state)
 	{
 		byte[,] grid = new byte[4, 5];
@@ -203,7 +211,6 @@ public partial class Board : Control
 		foreach (var block in _blocks)
 		{
 			byte sym = (byte)block.ID[0];
-
 			for (int x = 0; x < block.BlockSize.X; x++)
 				for (int y = 0; y < block.BlockSize.Y; y++)
 					grid[block.GridPos.X + x, block.GridPos.Y + y] = sym;
@@ -224,13 +231,18 @@ public partial class Board : Control
 		return new string(flat);
 	}
 
+	// Lowercase alias kept for backward compatibility.
 	public string serializeState(byte[,] grid) => SerializeState(grid);
 
 	private bool IsWinState(byte[,] grid) => grid[3, 2] == (byte)'1';
 
+	// -------------------------------------------------------------------------
+	// BFS helpers
+	// -------------------------------------------------------------------------
+
 	public List<byte[,]> GetNextStates(byte[,] currentGrid)
 	{
-		var neighbors = new List<byte[,]>();
+		var neighbors  = new List<byte[,]>();
 		var directions = new[] { Vector2I.Right, Vector2I.Left, Vector2I.Down, Vector2I.Up };
 
 		foreach (var b in FindBlocksInGrid(currentGrid))
@@ -272,7 +284,7 @@ public partial class Board : Control
 	private byte[,] ApplyMove(byte[,] grid, Vector2I pos, Vector2I size, Vector2I dir)
 	{
 		byte[,] next = (byte[,])grid.Clone();
-		byte sym = grid[pos.X, pos.Y];
+		byte sym     = grid[pos.X, pos.Y];
 
 		for (int x = 0; x < size.X; x++)
 			for (int y = 0; y < size.Y; y++)
@@ -294,7 +306,7 @@ public partial class Board : Control
 
 	private List<BlockData> FindBlocksInGrid(byte[,] grid)
 	{
-		var blocks = new List<BlockData>();
+		var blocks      = new List<BlockData>();
 		var processedIds = new HashSet<byte>();
 
 		for (int y = 0; y < 5; y++)
@@ -302,7 +314,6 @@ public partial class Board : Control
 			for (int x = 0; x < 4; x++)
 			{
 				byte id = grid[x, y];
-
 				if (id != (byte)'.' && !processedIds.Contains(id))
 				{
 					Vector2I sz = MeasureBlock(grid, x, y, id);
@@ -317,22 +328,19 @@ public partial class Board : Control
 
 	private Vector2I MeasureBlock(byte[,] grid, int startX, int startY, byte id)
 	{
-		int w = 0;
-		int h = 0;
-
-		for (int x = startX; x < 4 && grid[x, startY] == id; x++)
-			w++;
-
-		for (int y = startY; y < 5 && grid[startX, y] == id; y++)
-			h++;
-
+		int w = 0, h = 0;
+		for (int x = startX; x < 4 && grid[x, startY] == id; x++) w++;
+		for (int y = startY; y < 5 && grid[startX, y] == id; y++) h++;
 		return new Vector2I(w, h);
 	}
+
+	// -------------------------------------------------------------------------
+	// Player interaction
+	// -------------------------------------------------------------------------
 
 	public bool CanMove(KlotskiBlock block, Vector2I direction)
 	{
 		if (block == null) return false;
-
 		if (block.BlockSize.X > block.BlockSize.Y && direction.Y != 0) return false;
 		if (block.BlockSize.Y > block.BlockSize.X && direction.X != 0) return false;
 
@@ -349,13 +357,13 @@ public partial class Board : Control
 		{
 			if (other == block) continue;
 
-			bool overlaps = newPos.X < other.GridPos.X + other.BlockSize.X &&
+			bool overlaps =
+				newPos.X < other.GridPos.X + other.BlockSize.X &&
 				newPos.X + block.BlockSize.X > other.GridPos.X &&
 				newPos.Y < other.GridPos.Y + other.BlockSize.Y &&
 				newPos.Y + block.BlockSize.Y > other.GridPos.Y;
 
-			if (overlaps)
-				return false;
+			if (overlaps) return false;
 		}
 
 		return true;
@@ -386,9 +394,9 @@ public partial class Board : Control
 		if (_selectedBlock == null) return;
 
 		Vector2I dir = Vector2I.Zero;
-		if (@event.IsActionPressed("ui_up")) dir = Vector2I.Up;
-		if (@event.IsActionPressed("ui_down")) dir = Vector2I.Down;
-		if (@event.IsActionPressed("ui_left")) dir = Vector2I.Left;
+		if (@event.IsActionPressed("ui_up"))    dir = Vector2I.Up;
+		if (@event.IsActionPressed("ui_down"))  dir = Vector2I.Down;
+		if (@event.IsActionPressed("ui_left"))  dir = Vector2I.Left;
 		if (@event.IsActionPressed("ui_right")) dir = Vector2I.Right;
 
 		if (dir != Vector2I.Zero && CanMove(_selectedBlock, dir))
@@ -420,6 +428,10 @@ public partial class Board : Control
 		GD.Print($"Board exported to: {ExportPath}");
 	}
 
+	// -------------------------------------------------------------------------
+	// Board sprite / drawing
+	// -------------------------------------------------------------------------
+
 	private void LoadBoardAnimation()
 	{
 		if (!ResourceLoader.Exists(BoardSpritePath))
@@ -440,8 +452,8 @@ public partial class Board : Control
 		}
 
 		int safeFrameCount = Math.Max(1, BoardFrameCount);
-		int frameWidth = tex.GetWidth() / safeFrameCount;
-		int frameHeight = tex.GetHeight();
+		int frameWidth     = tex.GetWidth() / safeFrameCount;
+		int frameHeight    = tex.GetHeight();
 
 		_boardFrameSize = new Vector2(frameWidth, frameHeight);
 
@@ -453,10 +465,9 @@ public partial class Board : Control
 		{
 			var frame = new AtlasTexture
 			{
-				Atlas = tex,
+				Atlas  = tex,
 				Region = new Rect2(i * frameWidth, 0, frameWidth, frameHeight)
 			};
-
 			frames.AddFrame("default", frame);
 		}
 
@@ -466,9 +477,9 @@ public partial class Board : Control
 		_boardSprite = new AnimatedSprite2D
 		{
 			SpriteFrames = frames,
-			Animation = "default",
-			Position = new Vector2(frameWidth / 2f, frameHeight / 2f),
-			ZIndex = -100
+			Animation    = "default",
+			Position     = new Vector2(frameWidth / 2f, frameHeight / 2f),
+			ZIndex       = -100
 		};
 
 		AddChild(_boardSprite);
@@ -520,20 +531,24 @@ public partial class Board : Control
 
 	private void DrawBoardOutline(float boardW, float boardH)
 	{
-		float thick = 4f;
-		float exitY = GridOffset.Y + _exitRow * CellSize;
-		float exitH = _exitHeightCells * CellSize;
-		float left = GridOffset.X;
-		float right = GridOffset.X + boardW;
-		float top = GridOffset.Y;
+		float thick  = 4f;
+		float exitY  = GridOffset.Y + _exitRow * CellSize;
+		float exitH  = _exitHeightCells * CellSize;
+		float left   = GridOffset.X;
+		float right  = GridOffset.X + boardW;
+		float top    = GridOffset.Y;
 		float bottom = GridOffset.Y + boardH;
 
-		DrawLine(new Vector2(left, top), new Vector2(right, top), _borderColor, thick);
-		DrawLine(new Vector2(left, bottom), new Vector2(right, bottom), _borderColor, thick);
-		DrawLine(new Vector2(left, top), new Vector2(left, bottom), _borderColor, thick);
-		DrawLine(new Vector2(right, top), new Vector2(right, exitY), _borderColor, thick);
-		DrawLine(new Vector2(right, exitY + exitH), new Vector2(right, bottom), _borderColor, thick);
+		DrawLine(new Vector2(left,  top),         new Vector2(right, top),         _borderColor, thick);
+		DrawLine(new Vector2(left,  bottom),      new Vector2(right, bottom),      _borderColor, thick);
+		DrawLine(new Vector2(left,  top),         new Vector2(left,  bottom),      _borderColor, thick);
+		DrawLine(new Vector2(right, top),         new Vector2(right, exitY),       _borderColor, thick);
+		DrawLine(new Vector2(right, exitY + exitH), new Vector2(right, bottom),   _borderColor, thick);
 	}
+
+	// -------------------------------------------------------------------------
+	// Level loading / exporting
+	// -------------------------------------------------------------------------
 
 	public void LoadMatrixFromFile(string path)
 	{
@@ -568,7 +583,6 @@ public partial class Board : Control
 		{
 			var row = gridList[y].AsGodotArray();
 			matrix[y] = new int[row.Count];
-
 			for (int x = 0; x < row.Count; x++)
 				matrix[y][x] = (int)row[x];
 		}
@@ -608,7 +622,8 @@ public partial class Board : Control
 				if (id == 0 || visited[x, y]) continue;
 
 				var block = ExtractBlockFromMatrix(matrix, id, x, y, visited);
-				CreateBlock(block.id, block.pos, block.size, block.id == "1" ? _heroColor : _neutralBlockColor);
+				CreateBlock(block.id, block.pos, block.size,
+							block.id == "1" ? _heroColor : _neutralBlockColor);
 			}
 		}
 
@@ -616,19 +631,12 @@ public partial class Board : Control
 	}
 
 	private (string id, Vector2I pos, Vector2I size) ExtractBlockFromMatrix(
-		int[][] matrix,
-		int id,
-		int startX,
-		int startY,
-		bool[,] visited
-	)
+		int[][] matrix, int id, int startX, int startY, bool[,] visited)
 	{
 		int w = matrix[0].Length;
 		int h = matrix.Length;
-		int minX = startX;
-		int maxX = startX;
-		int minY = startY;
-		int maxY = startY;
+		int minX = startX, maxX = startX;
+		int minY = startY, maxY = startY;
 
 		var q = new Queue<Vector2I>();
 		q.Enqueue(new Vector2I(startX, startY));
@@ -637,10 +645,8 @@ public partial class Board : Control
 		while (q.Count > 0)
 		{
 			var p = q.Dequeue();
-			minX = Math.Min(minX, p.X);
-			maxX = Math.Max(maxX, p.X);
-			minY = Math.Min(minY, p.Y);
-			maxY = Math.Max(maxY, p.Y);
+			minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X);
+			minY = Math.Min(minY, p.Y); maxY = Math.Max(maxY, p.Y);
 
 			foreach (var dir in new[] { Vector2I.Up, Vector2I.Down, Vector2I.Left, Vector2I.Right })
 			{
@@ -669,7 +675,7 @@ public partial class Board : Control
 		var block = BlockTemplate.Instantiate<KlotskiBlock>();
 		AddChild(block);
 		block.ZIndex = 10;
-		block.Board = this;
+		block.Board  = this;
 		block.Setup(id, pos, size, CellSize, color, GridOffset);
 		_blocks.Add(block);
 	}
@@ -683,7 +689,6 @@ public partial class Board : Control
 		foreach (var block in _blocks)
 		{
 			int id = int.Parse(block.ID);
-
 			for (int dy = 0; dy < block.BlockSize.Y; dy++)
 				for (int dx = 0; dx < block.BlockSize.X; dx++)
 					matrix[block.GridPos.Y + dy][block.GridPos.X + dx] = id;
@@ -699,10 +704,8 @@ public partial class Board : Control
 		foreach (var row in ExportMatrixLayout())
 		{
 			var r = new Godot.Collections.Array();
-
 			foreach (int v in row)
 				r.Add(v);
-
 			outer.Add(r);
 		}
 
