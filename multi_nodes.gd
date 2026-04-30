@@ -245,7 +245,7 @@ func _gemini_read():
 
 			if nodeList[candidate_id].boardMatrix == arr[counter]:
 				current_index = candidate_id
-				connection.set_connection_shortpath()
+				connection.set_connection_geminipath()
 				found_next = true
 				break
 
