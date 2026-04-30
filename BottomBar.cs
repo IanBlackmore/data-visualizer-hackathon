@@ -263,8 +263,47 @@ public partial class BottomBar : Control
 		string[] headers = { "Content-Type: application/json" };
 
 		// Prepare the prompt and request body
-		string prompt = 
-			$"hello gemini can you read this json and return it back to me with all 2's set to 6's?\n\n{boardJson}";
+		string prompt =
+			$"You are analyzing a Klotski-style sliding block puzzle represented as a JSON matrix.\n\n" +
+			"CONTEXT:\n" +
+			"- The board is a 2D grid of integers.\n" +
+			"- Each non-zero integer represents a block ID.\n" +
+			"- Block ID \"1\" is the HERO block.\n" +
+			"- The hero block must reach the WINNING POSITION to solve the puzzle.\n\n" +
+			"RULES:\n" +
+			"- Blocks slide along their long face (a 1highx2wide will move LEFT/RIGHT, a 2highx1wide will move UP, DOWN).\n" +
+			"- A \"move\" is defined as sliding a single block by one grid cell.\n" +
+			"- Blocks cannot overlap or leave the board.\n" +
+			"- The goal is to compute the MINIMUM number of moves required to reach the winning state.\n\n" +
+			"WIN CONDITION:\n" +
+			"The puzzle is solved when the HERO block (ID 1) has its RIGHT EDGE aligned with the RIGHT-CENTER of the board.\n" +
+			"Example:\n\n" +
+			"Start:\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[1,1,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n\n" +
+			"Winning:\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,1,1]\n" +
+			"[0,0,0,0]\n" +
+			"[0,0,0,0]\n\n" +
+			"TASK:\n" +
+			"Given the following board state, compute:\n" +
+			"1. The MINIMUM number of moves required to reach the winning state.\n" +
+			"2. A step-by-step ordered list of moves.\n\n" +
+			"REQUIRED OUTPUT FORMAT:\n" +
+			"--- MOVE SEQUENCE TO SOLUTION ---\n" +
+			"Step 1: Block 'X' moved DIRECTION to (newX, newY)\n" +
+			"Step 2: Block 'Y' moved DIRECTION to (newX, newY)\n" +
+			"...\n" +
+			"Total Moves: N\n" +
+			"---------------------------------\n\n" +
+			"Here is the board JSON to analyze:\n" +
+			$"{boardJson}";
+
 		string escapedPrompt = System.Text.Json.JsonSerializer.Serialize(prompt);
 		// Remove the surrounding quotes added by Serialize
 		escapedPrompt = escapedPrompt.Substring(1, escapedPrompt.Length - 2);
@@ -275,33 +314,55 @@ public partial class BottomBar : Control
 		_geminiRequest.Request(url, headers, HttpClient.Method.Post, requestBody);
 	}
 
-	
 	private void _on_gemini_request_request_completed(long result, long response_code, string[] headers, byte[] body)
 	{
 		string response = System.Text.Encoding.UTF8.GetString(body);
-		GD.Print("Gemini API response: ", response);
+		GD.Print("Gemini API response recieved: ");
 
-		// Parse the response JSON
 		var json = new Godot.Json();
-		if (json.Parse(response) == Error.Ok)
+		if (json.Parse(response) != Error.Ok)
 		{
-			var dict = json.Data.AsGodotDictionary();
-			if (dict.ContainsKey("candidates"))
+			GD.PrintErr("Failed to parse JSON.");
+			return;
+		}
+
+		var root = json.Data.AsGodotDictionary();
+
+		if (!root.ContainsKey("candidates"))
+		{
+			GD.PrintErr("No candidates in response.");
+			return;
+		}
+
+		var candidates = root["candidates"].AsGodotArray();
+		if (candidates.Count == 0)
+		{
+			GD.PrintErr("Candidates array empty.");
+			return;
+		}
+
+		var content = candidates[0].AsGodotDictionary()["content"].AsGodotDictionary();
+		var parts = content["parts"].AsGodotArray();
+
+		// Collect ONLY "text" fields
+		System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+		foreach (var partObj in parts)
+		{
+			var part = partObj.AsGodotDictionary();
+
+			if (part.ContainsKey("text"))
 			{
-				var candidates = dict["candidates"].AsGodotArray();
-				if (candidates.Count > 0)
-				{
-					var content = candidates[0].AsGodotDictionary()["content"].AsGodotDictionary();
-					var parts = content["parts"].AsGodotArray();
-					if (parts.Count > 0)
-					{
-						string llmText = parts[0].AsGodotDictionary()["text"].AsString();
-						GD.Print("Gemini LLM returned:\n" + llmText);
-					}
-				}
+				sb.Append(part["text"].AsString());
+				sb.Append("\n");
 			}
 		}
+
+		string llmText = sb.ToString().Trim();
+		GD.Print("Gemini LLM (cleaned):\n" + llmText);
+
 	}
+
 
 	private string LoadGeminiApiKey(string path = "res://gemini_api_key.n")
 	{
