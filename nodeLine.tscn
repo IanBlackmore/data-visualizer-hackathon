@@ -3,8 +3,11 @@
 [ext_resource type="Script" uid="uid://cfi7n5nutdov2" path="res://node_line.gd" id="1_bed78"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ugv4f"]
+resource_local_to_scene = true
+top_radius = 0.2
+bottom_radius = 0.2
+height = 1.0
 
 [node name="NodeLine" type="MeshInstance3D" unique_id=2064153308]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
 mesh = SubResource("CylinderMesh_ugv4f")
 script = ExtResource("1_bed78")

@@ -6,9 +6,11 @@ var boardMatrix: Array[Array]
 var connections: Array[NodeLine]
 var prevMat: Material
 var isWinningPosition: bool
+var velocity: Vector3
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	velocity = Vector3.ZERO
 	isWinningPosition = false
 	$MeshInstance3D.material_override = load("res://whiteMat.tres")
 	prevMat = load("res://whiteMat.tres")
@@ -16,7 +18,7 @@ func _ready():
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_delta):
+func _process(delta):
 	pass
 
 func set_board_matrix(matrix: Array[Array]):
@@ -36,6 +38,7 @@ func _on_input_event(_camera, event, _event_position, _normal, _shape_idx):
 		print("Shape " + str(ID) + " Clicked!")
 		#do other stuff to display current instance of graph
 		set_node_selected()
+		AutoloadSignals.updateBoard.emit(boardMatrix)
 
 func _on_node_selected():
 	$MeshInstance3D.material_override = prevMat
@@ -49,3 +52,7 @@ func set_node_finish():
 	isWinningPosition = true
 	$MeshInstance3D.material_override = load("res://greenLineMat.tres")
 	prevMat = load("res://greenLineMat.tres")
+
+func set_node_start():
+	$MeshInstance3D.material_override = load("res://yellowLineMat.tres")
+	prevMat = load("res://yellowLineMat.tres")

@@ -41,19 +41,28 @@ public partial class Board : Control
 
 	public override void _Ready()
 	{
-		LoadBoardAnimation();
-		LoadMatrixFromFile(LevelPath);
-		UpdateBoardMinimumSize();
-		GetTree().Root.SetMeta("board", this);
+		CustomMinimumSize = new Vector2(_gridSize.X * CellSize, _gridSize.Y * CellSize);
+		LoadMatrixFromFile("res://Layouts/level2.json");
 		QueueRedraw();
 
-		GD.Print("Board ready.");
+		GetNode("/root/AutoloadSignals").Connect("updateBoard", new Callable(this, MethodName.OnUpdateBoard));
 
-		if (AutoSolveOnReady)
+		GD.Print("Board ready. Launching BFS Solver...");
+		SolvePuzzle();
+	}
+
+	private void OnUpdateBoard(Godot.Collections.Array gdMatrix)
+	{
+		int rows = gdMatrix.Count;
+		int[][] matrix = new int[rows][];
+		for (int y = 0; y < rows; y++)
 		{
-			GD.Print("Launching BFS Solver...");
-			SolvePuzzle();
+			var row = gdMatrix[y].AsGodotArray();
+			matrix[y] = new int[row.Count];
+			for (int x = 0; x < row.Count; x++)
+				matrix[y][x] = row[x].AsInt32();
 		}
+		LoadMatrixLayout(matrix);
 	}
 
 	// -------------------------------------------------------------------------
@@ -82,23 +91,35 @@ public partial class Board : Control
 			if (IsWinState(current) && firstWinHash == null)
 			{
 				firstWinHash = currentHash;
+				winStates.Add(currentHash);
 				GD.Print("Shortest path found! Continuing to map remaining states...");
 			}
 
+			var neighbors = new Godot.Collections.Array();
 			foreach (byte[,] next in GetNextStates(current))
 			{
-				string nextHash = SerializeState(next);
+				string nextHash = serializeState(next);
+				neighbors.Add(nextHash);
 				if (!visited.ContainsKey(nextHash))
 				{
 					visited.Add(nextHash, currentHash);
 					queue.Enqueue(next);
 				}
 			}
+			adjacency[currentHash] = neighbors;
 		}
+
+		GD.Print($"Discovery complete. {visited.Count} states, {winStates.Count} win states.");
+
+		var graphData = new Godot.Collections.Dictionary();
+		graphData["adjacency"] = adjacency;
+		graphData["win_states"] = winStates;
+		graphData["start"] = startHash;
+		GetTree().Root.SetMeta("klotski_graph", graphData);
+		GetNode("/root/AutoloadSignals").EmitSignal("graph_ready");
 
 		if (firstWinHash != null)
 		{
-			GD.Print($"Discovery complete. Total states in graph: {visited.Count}");
 			var path = ReconstructPath(visited, firstWinHash);
 			PrintMoveSequence(path);
 
@@ -123,6 +144,8 @@ public partial class Board : Control
 		}
 
 		path.Reverse();
+		string[] arr = path.ToArray();
+		GetNode("/root/AutoloadSignals").EmitSignal("winning_path", arr);
 		return path;
 	}
 
@@ -167,6 +190,7 @@ public partial class Board : Control
 
 		for (int i = 1; i < path.Count; i++)
 		{
+			await ToSignal(GetTree().CreateTimer(2.0f), SceneTreeTimer.SignalName.Timeout);
 			ApplyStateToBoard(path[i]);
 			await ToSignal(GetTree().CreateTimer(SolutionStepDelay), "timeout");
 		}
@@ -247,7 +271,8 @@ public partial class Board : Control
 
 		foreach (var b in FindBlocksInGrid(currentGrid))
 			foreach (var dir in directions)
-				if (CanMoveBFS(currentGrid, b.Pos, b.Size, dir))
+			{
+				if (IsDirectionAllowed(b.Size, dir) && CanMove(currentGrid, b.Pos, b.Size, dir))
 					neighbors.Add(ApplyMove(currentGrid, b.Pos, b.Size, dir));
 
 		return neighbors;
@@ -398,15 +423,20 @@ public partial class Board : Control
 		if (@event.IsActionPressed("ui_down"))  dir = Vector2I.Down;
 		if (@event.IsActionPressed("ui_left"))  dir = Vector2I.Left;
 		if (@event.IsActionPressed("ui_right")) dir = Vector2I.Right;
-
-		if (dir != Vector2I.Zero && CanMove(_selectedBlock, dir))
-		{
+		if (dir != Vector2I.Zero && IsDirectionAllowed(_selectedBlock.BlockSize, dir) && CanMove(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
 			CheckWin(_selectedBlock);
 		}
 	}
 
-	private void CheckWin(KlotskiBlock block)
+	private bool IsDirectionAllowed(Vector2I size, Vector2I dir)
+	{
+		if (size.X > size.Y) return dir == Vector2I.Left || dir == Vector2I.Right;
+		if (size.Y > size.X) return dir == Vector2I.Up || dir == Vector2I.Down;
+		return true; // square (2×2 hero) moves in all directions
+	}
+
+	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
 	{
 		if (block.ID != "1") return;
 

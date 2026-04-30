@@ -1,8 +1,16 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://bptvvnw7bsi5t"]
 
+[ext_resource type="Shader" uid="uid://dnppj58r1isnq" path="res://cellshader.gdshader" id="1_3lyr0"]
 [ext_resource type="Shader" uid="uid://cbnpq8a0rdny5" path="res://redLine.gdshader" id="1_68fi4"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2i105"]
+render_priority = 0
+shader = ExtResource("1_3lyr0")
+shader_parameter/outline_width = 0.01
+shader_parameter/outline_color = Color(0, 0, 0, 1)
 
 [resource]
 render_priority = 0
+next_pass = SubResource("ShaderMaterial_2i105")
 shader = ExtResource("1_68fi4")
 shader_parameter/glow_strength = 3.0
