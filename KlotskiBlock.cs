@@ -17,13 +17,7 @@ public partial class KlotskiBlock : Panel
 	private bool _spriteLoaded;
 
 	private Vector2 _boardOffset = Vector2.Zero;
-
-	private static readonly string[] NormalColors =
-	{
-		"purple",
-		"cyan",
-		"yellow"
-	};
+	private string _colorVariant = "purple";
 
 	public void Setup(string id, Vector2I pos, Vector2I size, int cellSize, Color color)
 	{
@@ -39,14 +33,28 @@ public partial class KlotskiBlock : Panel
 		Vector2 boardOffset
 	)
 	{
+		Setup(id, pos, size, cellSize, color, boardOffset, "purple");
+	}
+
+	public void Setup(
+		string id,
+		Vector2I pos,
+		Vector2I size,
+		int cellSize,
+		Color color,
+		Vector2 boardOffset,
+		string colorVariant
+	)
+	{
 		ID           = id;
 		GridPos      = pos;
 		BlockSize    = size;
 		_cellSize    = cellSize;
 		_baseColor   = color;
-		_boardOffset = boardOffset;
-		_isHero      = id == "1";
-		IsSliding    = false;
+		_boardOffset  = boardOffset;
+		_isHero       = id == "1";
+		_colorVariant = string.IsNullOrWhiteSpace(colorVariant) ? "purple" : colorVariant;
+		IsSliding     = false;
 
 		Position = GridToPixel(GridPos);
 
@@ -107,8 +115,7 @@ public partial class KlotskiBlock : Panel
 		}
 		else
 		{
-			int index = (int)GD.RandRange(0, NormalColors.Length - 1);
-			colorVariant = NormalColors[index];
+			colorVariant = _colorVariant;
 		}
 
 		bool isHorizontal = size.X > size.Y;

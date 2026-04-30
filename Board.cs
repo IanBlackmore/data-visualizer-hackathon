@@ -43,6 +43,15 @@ public partial class Board : Control
 	private readonly Color _heroColor         = new Color(0.80f, 0.25f, 0.22f);
 	private readonly Color _neutralBlockColor = new Color(0.64f, 0.63f, 0.58f);
 
+	private static readonly string[] NormalColorVariants =
+	{
+		"purple",
+		"cyan",
+		"yellow"
+	};
+
+	private readonly Dictionary<string, string> _blockColorVariants = new();
+
 	private int _exitRow = 2;
 	private int _exitHeightCells = 2;
 
@@ -572,6 +581,26 @@ public partial class Board : Control
 		return true; // square blocks can move in all directions
 	}
 
+	private void StartNewColorSet()
+	{
+		_blockColorVariants.Clear();
+	}
+
+	private string GetColorVariantForBlock(string id)
+	{
+		if (id == "1")
+			return "green";
+
+		if (!_blockColorVariants.TryGetValue(id, out string variant))
+		{
+			int index = Random.Shared.Next(0, NormalColorVariants.Length);
+			variant = NormalColorVariants[index];
+			_blockColorVariants[id] = variant;
+		}
+
+		return variant;
+	}
+
 	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
 	{
 		if (BlockTemplate == null)
@@ -580,11 +609,13 @@ public partial class Board : Control
 			return;
 		}
 
+		string colorVariant = GetColorVariantForBlock(id);
+
 		var block = BlockTemplate.Instantiate<KlotskiBlock>();
 		AddChild(block);
 		block.ZIndex = 10;
 		block.Board  = this;
-		block.Setup(id, pos, size, CellSize, color, GridOffset);
+		block.Setup(id, pos, size, CellSize, color, GridOffset, colorVariant);
 		_blocks.Add(block);
 	}
 
@@ -757,6 +788,7 @@ public partial class Board : Control
 				matrix[y][x] = row[x].AsInt32();
 		}
 
+		StartNewColorSet();
 		LoadMatrixLayout(matrix);
 	}
 
