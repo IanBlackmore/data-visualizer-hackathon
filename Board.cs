@@ -20,6 +20,8 @@ public partial class Board : Control
 	[Export] public bool AutoSolveOnReady = true;
 	[Export] public bool AutoPlaySolution = true;
 	[Export] public float SolutionStepDelay = 0.3f;
+	private Godot.Collections.Array winStates = new Godot.Collections.Array();
+	private Godot.Collections.Dictionary adjacency = new Godot.Collections.Dictionary();
 
 	private Vector2I _gridSize = new Vector2I(4, 5);
 	private readonly List<KlotskiBlock> _blocks = new();
@@ -272,9 +274,9 @@ public partial class Board : Control
 		foreach (var b in FindBlocksInGrid(currentGrid))
 			foreach (var dir in directions)
 			{
-				if (IsDirectionAllowed(b.Size, dir) && CanMove(currentGrid, b.Pos, b.Size, dir))
+				if (IsDirectionAllowed(b.Size, dir) && CanMoveBFS(currentGrid, b.Pos, b.Size, dir))
 					neighbors.Add(ApplyMove(currentGrid, b.Pos, b.Size, dir));
-
+			}
 		return neighbors;
 	}
 
@@ -363,35 +365,47 @@ public partial class Board : Control
 	// Player interaction
 	// -------------------------------------------------------------------------
 
-	public bool CanMove(KlotskiBlock block, Vector2I direction)
+	// public bool CanMove(KlotskiBlock block, Vector2I direction)
+	// {
+	// 	if (block == null) return false;
+	// 	if (block.BlockSize.X > block.BlockSize.Y && direction.Y != 0) return false;
+	// 	if (block.BlockSize.Y > block.BlockSize.X && direction.X != 0) return false;
+
+	// 	Vector2I newPos = block.GridPos + direction;
+
+	// 	if (newPos.X < 0 || newPos.Y < 0 ||
+	// 		newPos.X + block.BlockSize.X > _gridSize.X ||
+	// 		newPos.Y + block.BlockSize.Y > _gridSize.Y)
+	// 	{
+	// 		return false;
+	// 	}
+
+	// 	foreach (var other in _blocks)
+	// 	{
+	// 		if (other == block) continue;
+
+	// 		bool overlaps =
+	// 			newPos.X < other.GridPos.X + other.BlockSize.X &&
+	// 			newPos.X + block.BlockSize.X > other.GridPos.X &&
+	// 			newPos.Y < other.GridPos.Y + other.BlockSize.Y &&
+	// 			newPos.Y + block.BlockSize.Y > other.GridPos.Y;
+
+	// 		if (overlaps) return false;
+	// 	}
+
+	// 	return true;
+	// }
+
+	private void CheckWin(KlotskiBlock block)
 	{
-		if (block == null) return false;
-		if (block.BlockSize.X > block.BlockSize.Y && direction.Y != 0) return false;
-		if (block.BlockSize.Y > block.BlockSize.X && direction.X != 0) return false;
-
-		Vector2I newPos = block.GridPos + direction;
-
-		if (newPos.X < 0 || newPos.Y < 0 ||
-			newPos.X + block.BlockSize.X > _gridSize.X ||
-			newPos.Y + block.BlockSize.Y > _gridSize.Y)
+		if (block.ID == "1" && block.GridPos.X + block.BlockSize.X >= _gridSize.X && block.GridPos.Y == _exitRow)
 		{
-			return false;
+			_won = true;
+			block.PlayWinAnimation();
+			_selectedBlock?.SetHighlight(false);
+			_selectedBlock = null;
+			GD.Print("You win!");
 		}
-
-		foreach (var other in _blocks)
-		{
-			if (other == block) continue;
-
-			bool overlaps =
-				newPos.X < other.GridPos.X + other.BlockSize.X &&
-				newPos.X + block.BlockSize.X > other.GridPos.X &&
-				newPos.Y < other.GridPos.Y + other.BlockSize.Y &&
-				newPos.Y + block.BlockSize.Y > other.GridPos.Y;
-
-			if (overlaps) return false;
-		}
-
-		return true;
 	}
 
 	public void SelectBlock(KlotskiBlock block)
@@ -423,7 +437,8 @@ public partial class Board : Control
 		if (@event.IsActionPressed("ui_down"))  dir = Vector2I.Down;
 		if (@event.IsActionPressed("ui_left"))  dir = Vector2I.Left;
 		if (@event.IsActionPressed("ui_right")) dir = Vector2I.Right;
-		if (dir != Vector2I.Zero && IsDirectionAllowed(_selectedBlock.BlockSize, dir) && CanMove(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
+		if (dir != Vector2I.Zero && IsDirectionAllowed(_selectedBlock.BlockSize, dir) && CanMoveBFS(GetState2D(), _selectedBlock.GridPos, _selectedBlock.BlockSize, dir))
+		{
 			_selectedBlock.SlideTo(_selectedBlock.GridPos + dir);
 			CheckWin(_selectedBlock);
 		}
@@ -436,18 +451,21 @@ public partial class Board : Control
 		return true; // square (2×2 hero) moves in all directions
 	}
 
+	
 	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
 	{
-		if (block.ID != "1") return;
-
-		if (block.GridPos.X + block.BlockSize.X >= _gridSize.X && block.GridPos.Y == _exitRow)
+		if (BlockTemplate == null)
 		{
-			_won = true;
-			block.PlayWinAnimation();
-			_selectedBlock?.SetHighlight(false);
-			_selectedBlock = null;
-			GD.Print("You win!");
+			GD.PrintErr("BlockTemplate is not assigned on Board.");
+			return;
 		}
+
+		var block = BlockTemplate.Instantiate<KlotskiBlock>();
+		AddChild(block);
+		block.ZIndex = 10;
+		block.Board  = this;
+		block.Setup(id, pos, size, CellSize, color, GridOffset);
+		_blocks.Add(block);
 	}
 
 	private void ExportCurrentBoard()
@@ -694,21 +712,6 @@ public partial class Board : Control
 		return (id.ToString(), new Vector2I(minX, minY), new Vector2I(maxX - minX + 1, maxY - minY + 1));
 	}
 
-	private void CreateBlock(string id, Vector2I pos, Vector2I size, Color color)
-	{
-		if (BlockTemplate == null)
-		{
-			GD.PrintErr("BlockTemplate is not assigned on Board.");
-			return;
-		}
-
-		var block = BlockTemplate.Instantiate<KlotskiBlock>();
-		AddChild(block);
-		block.ZIndex = 10;
-		block.Board  = this;
-		block.Setup(id, pos, size, CellSize, color, GridOffset);
-		_blocks.Add(block);
-	}
 
 	public int[][] ExportMatrixLayout()
 	{
@@ -727,23 +730,6 @@ public partial class Board : Control
 		return matrix;
 	}
 
-	// public string ExportMatrixJson()
-	// {
-	// 	var outer = new Godot.Collections.Array();
-
-	// 	foreach (var row in ExportMatrixLayout())
-	// 	{
-	// 		var r = new Godot.Collections.Array();
-
-	// 		foreach (int v in row)
-	// 			r.Add(v);
-
-	// 		outer.Add(r);
-	// 	}
-
-	// 	var wrapper = new Godot.Collections.Dictionary<string, Variant> { ["grid"] = outer };
-	// 	return Json.Stringify(wrapper, "\t");
-	// }
 
 	public void SaveMatrixToFile(string path)
 	{
