@@ -221,8 +221,13 @@ public partial class Board : Control
 		byte[,] grid = new byte[sideLength, sideLength];
 		int i = 0;
 
-		for (int y = 0; y < 5; y++)
-			for (int x = 0; x < 4; x++)
+		// Must mirror SerializeState exactly: y outer, x inner, full sideLength
+		// in both dimensions. The previous 4x5 loop was a leftover from when
+		// the game used a 4-wide x 5-tall traditional Klotski board, and it
+		// was the root cause of the playback corruption that put blocks at
+		// out-of-bounds positions and crashed the next interaction.
+		for (int y = 0; y < sideLength; y++)
+			for (int x = 0; x < sideLength; x++)
 				grid[x, y] = (byte)state[i++];
 
 		return grid;
@@ -240,7 +245,17 @@ public partial class Board : Control
 			byte sym = (byte)block.ID[0];
 			for (int x = 0; x < block.BlockSize.X; x++)
 				for (int y = 0; y < block.BlockSize.Y; y++)
-					grid[block.GridPos.X + x, block.GridPos.Y + y] = sym;
+				{
+					int gx = block.GridPos.X + x;
+					int gy = block.GridPos.Y + y;
+					// Defensive: ignore cells outside the grid rather than
+					// crashing. Should never happen now that DeserializeState
+					// is correct, but keeps the game alive if something else
+					// ever puts a block off-grid.
+					if (gx < 0 || gx >= sideLength || gy < 0 || gy >= sideLength)
+						continue;
+					grid[gx, gy] = sym;
+				}
 		}
 
 		return grid;
@@ -397,7 +412,6 @@ public partial class Board : Control
 			return;
 		}
 
-		if (@event.IsActionPressed("export_board")) { SaveMatrixToFile("res://Layouts/level1.json"); return; }
 		if (_selectedBlock == null) return;
 
 		Vector2I dir = Vector2I.Zero;
