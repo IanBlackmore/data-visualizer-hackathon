@@ -3,6 +3,7 @@ extends Node3D
 
 @export var max_nodes: int = 500
 
+var trueArray: Array[Array]
 var repulsion_strength: float = 11000.0
 var stiffness: float = 10.0
 var rest_length: float = 20.0
@@ -15,6 +16,8 @@ const nodeLine: PackedScene = preload("res://nodeLine.tscn")
 var nodeList: Array[Graphnode]
 var currentID: int
 
+signal call_good_path
+
 func _ready():
 	for child in get_children():
 		child.queue_free()
@@ -24,6 +27,8 @@ func _ready():
 	# Board may have already finished BFS before this node was ready
 	if get_tree().root.has_meta("klotski_graph"):
 		_on_graph_ready()
+	call_good_path.connect(find_good_path)
+	
 
 func _on_graph_ready():
 	if nodeList.size() > 0:
@@ -31,6 +36,7 @@ func _on_graph_ready():
 	var data: Dictionary = get_tree().root.get_meta("klotski_graph")
 	seed(21)
 	build_graph(data["adjacency"], data["win_states"], data["start"])
+	
 
 func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
 	# Pass 1: BFS-order node creation, capped at max_nodes
@@ -77,6 +83,7 @@ func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
 		await get_tree().create_timer(spawn_delay).timeout
 
 	print("Graph built visually: ", nodeList.size(), " nodes")
+	call_good_path.emit()
 
 #func build_graph(adjacency: Dictionary, win_states: Array, start_hash: String):
 	## Pass 1: BFS-order node creation, capped at max_nodes
@@ -202,9 +209,7 @@ func board_to_key(board: Array[Array]) -> String:
 
 
 func _on_path_ready(path: Array[String]):
-	var trueArray: Array[Array] = []
-	print("path is")
-	print(path)
+	
 	var side := 6
 	for stri in path:
 		var intermediate : Array[Array] = []
@@ -216,25 +221,29 @@ func _on_path_ready(path: Array[String]):
 				else:
 					intArr.append(int(stri[j*side+i]))
 			intermediate.append(intArr)
-		print(intermediate)
+		
 		trueArray.append(intermediate)
-	find_good_path(trueArray)
 
-func find_good_path(trueArray: Array[Array]):
+func find_good_path():
 	var i: int = 0
 	var counter: int = 0
-	await AutoloadSignals.graph_ready
+	
+	for item in nodeList:
+		if item.boardMatrix == trueArray[counter]:
+			item.set_node_start()
+			i = item.ID
+			counter = 1
+			break
+	
 	while nodeList[i].isWinningPosition == false:
 		for connection in nodeList[i].connections:
 			if nodeList[connection.nodeID1].boardMatrix == trueArray[counter]:
 				i = connection.nodeID1
-				print("set")
 				connection.set_connection_shortpath()
 				counter += 1
 				break
 			elif nodeList[connection.nodeID2].boardMatrix == trueArray[counter]:
 				i = connection.nodeID2
-				print("set")
 				connection.set_connection_shortpath()
 				counter += 1
 				break
