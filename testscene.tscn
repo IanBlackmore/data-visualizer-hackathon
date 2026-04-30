@@ -21,8 +21,6 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = -108.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_horizontal = 3
@@ -34,7 +32,7 @@ script = ExtResource("2_mawog")
 [node name="SubViewport2" type="SubViewport" parent="SubViewportContainer2" unique_id=1731576058]
 transparent_bg = true
 handle_input_locally = false
-size = Vector2i(1920, 108)
+size = Vector2i(1152, 108)
 size_2d_override_stretch = true
 render_target_update_mode = 4
 
@@ -98,8 +96,8 @@ text = "Export JSON"
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -652.0
-offset_bottom = -148.0
+offset_right = -552.0
+offset_bottom = -48.0
 grow_horizontal = 2
 grow_vertical = 2
 scale = Vector2(0.735, 0.735)
@@ -107,7 +105,8 @@ scale = Vector2(0.735, 0.735)
 [node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=1237155874]
 transparent_bg = true
 handle_input_locally = false
-size = Vector2i(500, 500)
+size = Vector2i(600, 600)
+size_2d_override_stretch = true
 render_target_update_mode = 4
 
 [node name="Node2D" parent="SubViewportContainer/SubViewport" unique_id=2113247475 instance=ExtResource("1_44gc5")]
