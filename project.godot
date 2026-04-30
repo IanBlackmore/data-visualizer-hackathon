@@ -11,13 +11,18 @@ config_version=5
 [application]
 
 config/name="Data Visualizer"
-run/main_scene="uid://317hvtofyeyj"
+run/main_scene="uid://55jfvroefcs4"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 AutoloadSignals="*uid://blt3dfh05xa3s"
+
+[display]
+
+window/stretch/mode="viewport"
+window/stretch/aspect="expand"
 
 [dotnet]
 
