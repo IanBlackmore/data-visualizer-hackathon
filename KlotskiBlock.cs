@@ -38,13 +38,13 @@ public partial class KlotskiBlock : Panel
 		Vector2 boardOffset
 	)
 	{
-		ID = id;
-		GridPos = pos;
-		BlockSize = size;
-		_cellSize = cellSize;
-		_baseColor = color;
+		ID           = id;
+		GridPos      = pos;
+		BlockSize    = size;
+		_cellSize    = cellSize;
+		_baseColor   = color;
 		_boardOffset = boardOffset;
-		_isHero = id == "1";
+		_isHero      = id == "1";
 
 		Position = GridToPixel(GridPos);
 
@@ -73,21 +73,19 @@ public partial class KlotskiBlock : Panel
 	private void ApplyTransparentStyle()
 	{
 		var style = new StyleBoxFlat();
-		style.BgColor = Colors.Transparent;
+		style.BgColor     = Colors.Transparent;
 		style.BorderColor = Colors.Transparent;
 		style.SetBorderWidthAll(0);
-
 		AddThemeStyleboxOverride("panel", style);
 	}
 
 	private void ApplyFallbackStyle()
 	{
 		var style = new StyleBoxFlat();
-		style.BgColor = _baseColor;
+		style.BgColor     = _baseColor;
 		style.BorderColor = _baseColor.Darkened(0.45f);
 		style.SetBorderWidthAll(2);
 		style.SetCornerRadiusAll(8);
-
 		AddThemeStyleboxOverride("panel", style);
 	}
 
@@ -156,24 +154,25 @@ public partial class KlotskiBlock : Panel
 
 		for (int i = 0; i < frameCount; i++)
 		{
-			var frame = new AtlasTexture();
-			frame.Atlas = tex;
-			frame.Region = new Rect2(
-				i * frameWidth,
-				0,
-				frameWidth,
-				tex.GetHeight()
-			);
-
+			var frame = new AtlasTexture
+			{
+				Atlas  = tex,
+				Region = new Rect2(
+					i * frameWidth,
+					0,
+					frameWidth,
+					tex.GetHeight()
+				)
+			};
 			frames.AddFrame("default", frame);
 		}
 
 		frames.SetAnimationSpeed("default", isWin ? 10 : 8);
 		frames.SetAnimationLoop("default", true);
 
-		_sprite.SpriteFrames = frames;
-		_sprite.Animation = "default";
-		_sprite.Position = Size / 2f;
+		_sprite.SpriteFrames    = frames;
+		_sprite.Animation       = "default";
+		_sprite.Position        = Size / 2f;
 		_sprite.RotationDegrees = isHorizontal ? 90 : 0;
 
 		_sprite.Play("default");
@@ -217,16 +216,10 @@ public partial class KlotskiBlock : Panel
 
 	public void SetHighlight(bool active)
 	{
-		// No white outline when selected.
-
 		if (_spriteLoaded)
-		{
 			ApplyTransparentStyle();
-		}
 		else
-		{
 			ApplyFallbackStyle();
-		}
 
 		QueueRedraw();
 	}
@@ -245,32 +238,32 @@ public partial class KlotskiBlock : Panel
 			new Vector2(w - m * 2f, h - m * 2f)
 		);
 
+		// Top highlight
 		DrawLine(
 			new Vector2(rect.Position.X + 6f, rect.Position.Y + 3f),
-			new Vector2(rect.End.X - 6f, rect.Position.Y + 3f),
-			_baseColor.Lightened(0.45f),
-			1.5f
+			new Vector2(rect.End.X - 6f,      rect.Position.Y + 3f),
+			_baseColor.Lightened(0.45f), 1.5f
 		);
 
+		// Left highlight
 		DrawLine(
 			new Vector2(rect.Position.X + 3f, rect.Position.Y + 6f),
 			new Vector2(rect.Position.X + 3f, rect.End.Y - 6f),
-			_baseColor.Lightened(0.20f),
-			1.0f
+			_baseColor.Lightened(0.20f), 1.0f
 		);
 
+		// Bottom shadow
 		DrawLine(
 			new Vector2(rect.Position.X + 6f, rect.End.Y - 3f),
-			new Vector2(rect.End.X - 4f, rect.End.Y - 3f),
-			_baseColor.Darkened(0.35f),
-			1.5f
+			new Vector2(rect.End.X - 4f,      rect.End.Y - 3f),
+			_baseColor.Darkened(0.35f), 1.5f
 		);
 
+		// Right shadow
 		DrawLine(
 			new Vector2(rect.End.X - 3f, rect.Position.Y + 6f),
 			new Vector2(rect.End.X - 3f, rect.End.Y - 4f),
-			_baseColor.Darkened(0.35f),
-			1.0f
+			_baseColor.Darkened(0.35f), 1.0f
 		);
 	}
 }
